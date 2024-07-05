@@ -87,6 +87,17 @@ export class DedupedRequest {
       }
     };
 
+    const removeCallbackFromEntry = (entryRemovalCallback) => {
+      if (entry.result) return;
+      entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
+      if (!entry.callbacks.length) {
+        console.log("all callbacks removed, time to cancel entry", entry);
+        entry.cancel();
+        delete this.entries[key];
+        entryRemovalCallback();
+      }
+    };
+
     if (entry.result) {
       const [err, result] = entry.result;
       if (this.scheduler) {
@@ -111,6 +122,7 @@ export class DedupedRequest {
           cancelled: false,
           cancel() {
             this.cancelled = true;
+            removeCallbackFromEntry(() => {});
           },
         };
         imageQueue.push(queued);
@@ -138,14 +150,7 @@ export class DedupedRequest {
     }
 
     return () => {
-      if (entry.result) return;
-      entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
-      if (!entry.callbacks.length) {
-        console.log("all callbacks removed, time to cancel entry", entry);
-        entry.cancel();
-        delete this.entries[key];
-        advanceImageRequestQueue();
-      }
+      removeCallbackFromEntry(advanceImageRequestQueue);
     };
   }
 }
