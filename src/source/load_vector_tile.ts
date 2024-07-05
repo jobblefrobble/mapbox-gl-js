@@ -122,11 +122,14 @@ export class DedupedRequest {
           cancelled: false,
           cancel() {
             this.cancelled = true;
-            removeCallbackFromEntry(() => {});
           },
         };
         imageQueue.push(queued);
-        entry.cancel = queued.cancel;
+        entry.cancel = () => {
+          imageQueue.forEach(
+            (queueItem) => queueItem?.key === key && queueItem.cancel()
+          );
+        };
         return queued.cancel;
       }
       numImageRequests++;
