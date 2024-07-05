@@ -95,7 +95,9 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
-          request.cancel = this.request(key, metadata, requestFunc, callback);
+          console.log("trying to request from queue", key, metadata);
+          //request.cancel = this.request(key, metadata, requestFunc, callback);
+          entry.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
             key,
