@@ -124,9 +124,10 @@ export class DedupedRequest {
     }
 
     entry.callbacks.push(callback);
+    numImageRequests++;
 
     if (!entry.cancel) {
-      if (numImageRequests >= 1) {
+      if (numImageRequests > 1) {
         const queued = {
           key,
           metadata,
@@ -145,7 +146,6 @@ export class DedupedRequest {
         };
         return queued.cancel;
       }
-      numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
         console.log("getArrayBuffer completed successfully", entry);
