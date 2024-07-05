@@ -34,6 +34,14 @@ export type LoadVectorData = (
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback
 ) => AbortVectorData | null | undefined;
+
+let imageQueue, numImageRequests;
+export const resetImageRequestQueue = () => {
+  imageQueue = [];
+  numImageRequests = 0;
+};
+resetImageRequestQueue();
+
 export class DedupedRequest {
   entries: {
     [key: string]: any;
@@ -45,13 +53,27 @@ export class DedupedRequest {
     this.scheduler = scheduler;
   }
 
+  getEntry(key: string) {
+    return (this.entries[key] = this.entries[key] || { callbacks: [] });
+  }
+
+  cancelRequestsInEntry(key: string, callback: LoadVectorDataCallback) {
+    const entry = this.getEntry(key);
+    if (entry.result) return;
+    entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
+    if (!entry.callbacks.length) {
+      entry.cancel();
+      delete this.entries[key];
+    }
+  }
+
   request(
     key: string,
     metadata: any,
     request: any,
     callback: LoadVectorDataCallback
   ): () => void {
-    const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
+    const entry = this.getEntry(key);
 
     if (entry.result) {
       const [err, result] = entry.result;
@@ -68,39 +90,59 @@ export class DedupedRequest {
     entry.callbacks.push(callback);
 
     if (!entry.cancel) {
-        console.log("about to call makeRequest for entry with not cancel function", entry)
-      entry.cancel = request((err, result) => {
-        entry.result = [err, result];
-        for (const cb of entry.callbacks) {
-          if (this.scheduler) {
-            this.scheduler.add(() => {
-              cb(err, result);
-            }, metadata);
-          } else {
-            cb(err, result);
+      // request is an alias of makeRequest in our case
+      // This is where we should have our queueing logic
+
+      if (numImageRequests >= 2) {
+        const queued = {
+          key: key,
+          cancelled: false,
+          cancel() {
+            this.cancelled = true;
+          },
+        };
+        imageQueue.push(queued);
+        return queued.cancel;
+      }
+      numImageRequests++;
+
+      let advanced = false;
+      const advanceImageRequestQueue = () => {
+        if (advanced) return;
+        advanced = true;
+        numImageRequests--;
+        assert(numImageRequests >= 0);
+        while (imageQueue.length && numImageRequests < 2) {
+          // eslint-disable-line
+          const queuedObject = imageQueue.shift();
+          const { key, cancelled } = queuedObject;
+          if (!cancelled) {
+            const entryFromQueueKey = this.getEntry(key);
+            entryFromQueueKey.cancel = request((err, result) => {
+              advanceImageRequestQueue();
+              console.log("makeRequest callback");
+              entryFromQueueKey.result = [err, result];
+              console.log("err", err);
+              console.log("result", result);
+              for (const cb of entryFromQueueKey.callbacks) {
+                if (this.scheduler) {
+                  this.scheduler.add(() => {
+                    cb(err, result);
+                  }, metadata);
+                } else {
+                  cb(err, result);
+                }
+              }
+              setTimeout(() => delete this.entries[key], 1000 * 3);
+            });
           }
         }
-        setTimeout(() => delete this.entries[key], 1000 * 3);
-      });
+      };
     }
 
-    return () => {
-      if (entry.result) return;
-      entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
-      if (!entry.callbacks.length) {
-        entry.cancel();
-        delete this.entries[key];
-      }
-    };
+    return () => this.cancelRequestsInEntry(key, callback);
   }
 }
-
-let imageQueue, numImageRequests;
-export const resetImageRequestQueue = () => {
-  imageQueue = [];
-  numImageRequests = 0;
-};
-resetImageRequestQueue();
 
 /**
  * @private
@@ -113,59 +155,7 @@ export function loadVectorTile(
   const key = JSON.stringify(params.request);
 
   const makeRequest = (callback: LoadVectorDataCallback) => {
-    console.log(
-      "makeRequest",
-      "numImageRequests",
-      numImageRequests,
-      "imageQueue",
-      imageQueue.length
-    );
-    // limit concurrent image loads to help with raster sources performance on big screens
-    if (numImageRequests >= 2) {
-      const queued = {
-        params,
-        callback,
-        cancelled: false,
-        skipParse,
-        cancel() {
-          this.cancelled = true;
-        },
-      };
-      imageQueue.push(queued);
-      return queued;
-    }
-    numImageRequests++;
-
-    let advanced = false;
-    const advanceImageRequestQueue = () => {
-      if (advanced) {
-        console.log(
-          "returning early because already advanced",
-          numImageRequests,
-          imageQueue.length
-        );
-        return;
-      }
-      console.log(
-        "not advanced, so proceeding",
-        numImageRequests,
-        imageQueue.length
-      );
-      advanced = true;
-      numImageRequests--;
-      assert(numImageRequests >= 0);
-      while (imageQueue.length && numImageRequests < 2) {
-        // eslint-disable-line
-        const requestFromQueue = imageQueue.shift();
-        const { params, callback, cancelled, skipParse } = requestFromQueue;
-        console.log("requestFromQueue", requestFromQueue);
-        if (!cancelled) {
-          //   loadVectorTile(params, callback, skipParse);
-          requestFromQueue.cancel = makeRequest(callback);
-        }
-      }
-    };
-
+    // getArrayBuffer is what does the actual fetching
     const request = getArrayBuffer(
       params.request,
       (
@@ -174,8 +164,6 @@ export function loadVectorTile(
         cacheControl?: string | null,
         expires?: string | null
       ) => {
-        advanceImageRequestQueue();
-
         if (err) {
           callback(err);
         } else if (data) {
@@ -192,7 +180,8 @@ export function loadVectorTile(
     );
     return () => {
       request.cancel();
-      advanceImageRequestQueue();
+      console.log("CANCELLING ARRAY BUFFER REQUEST");
+      callback();
     };
   };
 
