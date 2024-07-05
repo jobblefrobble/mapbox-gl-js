@@ -68,6 +68,7 @@ export class DedupedRequest {
     entry.callbacks.push(callback);
 
     if (!entry.cancel) {
+        console.log("about to call makeRequest for entry with not cancel function", entry)
       entry.cancel = request((err, result) => {
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
