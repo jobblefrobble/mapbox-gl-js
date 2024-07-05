@@ -376,12 +376,7 @@ class VectorTileSource extends Evented implements ISource {
 
   abortTile(tile: Tile) {
     if (tile.request) {
-      if (!tile.request.cancel) {
-        console.log(
-          "cancel function did not exist on tile request",
-          tile.request
-        );
-      }
+      console.log("aborting vector tile", tile.request);
       tile.request.cancel();
       delete tile.request;
     }
