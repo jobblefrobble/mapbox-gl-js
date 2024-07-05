@@ -138,7 +138,11 @@ export function loadVectorTile(
     let advanced = false;
     const advanceImageRequestQueue = () => {
       if (advanced) {
-        console.log("returning early because already advanced");
+        console.log(
+          "returning early because already advanced",
+          numImageRequests,
+          imageQueue.length
+        );
         return;
       }
       console.log(
@@ -155,7 +159,8 @@ export function loadVectorTile(
         const { params, callback, cancelled, skipParse } = requestFromQueue;
         console.log("requestFromQueue", requestFromQueue);
         if (!cancelled) {
-          loadVectorTile(params, callback, skipParse);
+          //   loadVectorTile(params, callback, skipParse);
+          requestFromQueue.cancel = makeRequest(callback);
         }
       }
     };
