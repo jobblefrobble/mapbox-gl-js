@@ -62,7 +62,15 @@ export class DedupedRequest {
 
     let advanced = false;
     const advanceImageRequestQueue = () => {
-      if (advanced) return;
+      if (advanced) {
+        console.log("aborting queue advancement because advanced flag is set");
+        return;
+      }
+      console.log(
+        "proceeding with queue advancement",
+        numImageRequests,
+        imageQueue.length
+      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -113,6 +121,7 @@ export class DedupedRequest {
       numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
+        console.log("getArrayBuffer completed successfully", entry);
         advanceImageRequestQueue();
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
@@ -133,6 +142,7 @@ export class DedupedRequest {
       if (entry.result) return;
       entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
       if (!entry.callbacks.length) {
+        console.log("all callbacks removed, time to cancel entry", entry);
         entry.cancel();
         delete this.entries[key];
         advanceImageRequestQueue();
