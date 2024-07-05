@@ -102,7 +102,7 @@ export class DedupedRequest {
           },
         };
         imageQueue.push(queued);
-        return queued.cancel;
+        return (entry.cancel = queued.cancel);
       }
       numImageRequests++;
 
@@ -133,7 +133,9 @@ export class DedupedRequest {
                   cb(err, result);
                 }
               }
-              setTimeout(() => delete this.entries[key], 1000 * 3);
+              setTimeout(() => {
+                delete this.entries[key];
+              }, 1000 * 3);
             });
           }
         }
