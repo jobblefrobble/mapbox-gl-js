@@ -121,6 +121,7 @@
     "vitest": "^1.6.0"
   },
   "scripts": {
+    "prepare": "npm run build-prod-min && npm run build-css",
     "build-dev": "rollup -c --environment BUILD:dev",
     "watch-dev": "rollup -c --environment BUILD:dev --watch",
     "build-bench": "rollup -c --environment BUILD:bench,MINIFY:true",
