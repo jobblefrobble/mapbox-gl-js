@@ -120,11 +120,12 @@ export function loadVectorTile(
       imageQueue.length
     );
     // limit concurrent image loads to help with raster sources performance on big screens
-    if (numImageRequests >= config.MAX_PARALLEL_IMAGE_REQUESTS) {
+    if (numImageRequests >= 2) {
       const queued = {
         params,
         callback,
         cancelled: false,
+        skipParse,
         cancel() {
           this.cancelled = true;
         },
@@ -136,22 +137,25 @@ export function loadVectorTile(
 
     let advanced = false;
     const advanceImageRequestQueue = () => {
-      console.log("advanceImageRequestQueue");
-      if (advanced) return;
-      console.log("not advanced, so proceeding");
+      if (advanced) {
+        console.log("returning early because already advanced");
+        return;
+      }
+      console.log(
+        "not advanced, so proceeding",
+        numImageRequests,
+        imageQueue.length
+      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
-      while (
-        imageQueue.length &&
-        numImageRequests < config.MAX_PARALLEL_IMAGE_REQUESTS
-      ) {
+      while (imageQueue.length && numImageRequests < 2) {
         // eslint-disable-line
         const requestFromQueue = imageQueue.shift();
-        const { requestParameters, callback, cancelled } = requestFromQueue;
+        const { params, callback, cancelled, skipParse } = requestFromQueue;
         console.log("requestFromQueue", requestFromQueue);
         if (!cancelled) {
-          requestFromQueue.cancel = makeRequest(callback);
+          loadVectorTile(params, callback, skipParse);
         }
       }
     };
