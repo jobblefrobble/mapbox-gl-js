@@ -96,8 +96,7 @@ export class DedupedRequest {
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
           console.log("trying to request from queue", key, metadata);
-          //request.cancel = this.request(key, metadata, requestFunc, callback);
-          entry.cancel = this.request(key, metadata, requestFunc, callback);
+          request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
             key,
@@ -124,10 +123,9 @@ export class DedupedRequest {
     }
 
     entry.callbacks.push(callback);
-    numImageRequests++;
 
     if (!entry.cancel) {
-      if (numImageRequests > 1) {
+      if (numImageRequests >= 1) {
         const queued = {
           key,
           metadata,
@@ -146,6 +144,7 @@ export class DedupedRequest {
         };
         return queued.cancel;
       }
+      numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
         console.log("getArrayBuffer completed successfully", entry);
