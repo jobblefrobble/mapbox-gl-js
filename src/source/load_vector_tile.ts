@@ -117,7 +117,6 @@ export class DedupedRequest {
         entry.cancel = queued.cancel;
         return queued.cancel;
       }
-
       numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
