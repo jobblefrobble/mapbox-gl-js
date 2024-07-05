@@ -2,7 +2,6 @@
 import { VectorTile } from "@mapbox/vector-tile";
 import Protobuf from "pbf";
 import { getArrayBuffer } from "../util/ajax";
-import config from "../util/config";
 import assert from "assert";
 
 // @ts-expect-error - TS2300 - Duplicate identifier 'VectorTile'.
@@ -53,27 +52,32 @@ export class DedupedRequest {
     this.scheduler = scheduler;
   }
 
-  getEntry(key: string) {
-    return (this.entries[key] = this.entries[key] || { callbacks: [] });
-  }
-
-  cancelRequestsInEntry(key: string, callback: LoadVectorDataCallback) {
-    const entry = this.getEntry(key);
-    if (entry.result) return;
-    entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
-    if (!entry.callbacks.length) {
-      entry.cancel();
-      delete this.entries[key];
-    }
-  }
-
   request(
     key: string,
     metadata: any,
-    request: any,
+    requestFunc: any,
     callback: LoadVectorDataCallback
   ): () => void {
-    const entry = this.getEntry(key);
+    const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
+
+    let advanced = false;
+    const advanceImageRequestQueue = () => {
+      if (advanced) return;
+      advanced = true;
+      numImageRequests--;
+      assert(numImageRequests >= 0);
+      while (imageQueue.length && numImageRequests < 1) {
+        // eslint-disable-line
+        const request = imageQueue.shift();
+        const { key, metadata, requestFunc, callback, cancelled } = request;
+        if (!cancelled) {
+          request.cancel = this.request(key, metadata, requestFunc, callback);
+        }
+
+        // Possibly need to do some handling of entry callbacks
+        // here if queued request has been cancelled
+      }
+    };
 
     if (entry.result) {
       const [err, result] = entry.result;
@@ -90,59 +94,50 @@ export class DedupedRequest {
     entry.callbacks.push(callback);
 
     if (!entry.cancel) {
-      // request is an alias of makeRequest in our case
-      // This is where we should have our queueing logic
-
-      if (numImageRequests >= 2) {
+      if (numImageRequests >= 1) {
         const queued = {
-          key: key,
+          key,
+          metadata,
+          requestFunc,
+          callback,
           cancelled: false,
           cancel() {
             this.cancelled = true;
           },
         };
         imageQueue.push(queued);
-        return (entry.cancel = queued.cancel);
+        entry.cancel = queued.cancel;
+        return queued.cancel;
       }
+
       numImageRequests++;
 
-      let advanced = false;
-      const advanceImageRequestQueue = () => {
-        if (advanced) return;
-        advanced = true;
-        numImageRequests--;
-        assert(numImageRequests >= 0);
-        while (imageQueue.length && numImageRequests < 2) {
-          // eslint-disable-line
-          const queuedObject = imageQueue.shift();
-          const { key, cancelled } = queuedObject;
-          if (!cancelled) {
-            const entryFromQueueKey = this.getEntry(key);
-            entryFromQueueKey.cancel = request((err, result) => {
-              advanceImageRequestQueue();
-              console.log("makeRequest callback");
-              entryFromQueueKey.result = [err, result];
-              console.log("err", err);
-              console.log("result", result);
-              for (const cb of entryFromQueueKey.callbacks) {
-                if (this.scheduler) {
-                  this.scheduler.add(() => {
-                    cb(err, result);
-                  }, metadata);
-                } else {
-                  cb(err, result);
-                }
-              }
-              setTimeout(() => {
-                delete this.entries[key];
-              }, 1000 * 3);
-            });
+      const actualRequestCancel = requestFunc((err, result) => {
+        advanceImageRequestQueue();
+        entry.result = [err, result];
+        for (const cb of entry.callbacks) {
+          if (this.scheduler) {
+            this.scheduler.add(() => {
+              cb(err, result);
+            }, metadata);
+          } else {
+            cb(err, result);
           }
         }
-      };
+        setTimeout(() => delete this.entries[key], 1000 * 3);
+      });
+      entry.cancel = actualRequestCancel;
     }
 
-    return () => this.cancelRequestsInEntry(key, callback);
+    return () => {
+      if (entry.result) return;
+      entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
+      if (!entry.callbacks.length) {
+        entry.cancel();
+        delete this.entries[key];
+        advanceImageRequestQueue();
+      }
+    };
   }
 }
 
@@ -157,7 +152,6 @@ export function loadVectorTile(
   const key = JSON.stringify(params.request);
 
   const makeRequest = (callback: LoadVectorDataCallback) => {
-    // getArrayBuffer is what does the actual fetching
     const request = getArrayBuffer(
       params.request,
       (
@@ -182,7 +176,6 @@ export function loadVectorTile(
     );
     return () => {
       request.cancel();
-      console.log("CANCELLING ARRAY BUFFER REQUEST");
       callback();
     };
   };
@@ -199,6 +192,7 @@ export function loadVectorTile(
     isSymbolTile: params.isSymbolTile,
     zoom: params.tileZoom,
   };
+
   return (this.deduped as DedupedRequest).request(
     key,
     callbackMetadata,
