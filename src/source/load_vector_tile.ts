@@ -60,6 +60,22 @@ export class DedupedRequest {
   ): () => void {
     const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
 
+    const removeCallbackFromEntry = ({
+      key,
+      entryRemovalCallback,
+      requestCallback,
+    }) => {
+      const entry = this.entries[key];
+      if (entry.result) return;
+      entry.callbacks = entry.callbacks.filter((cb) => cb !== requestCallback);
+      if (!entry.callbacks.length) {
+        console.log("all callbacks removed, time to cancel entry", entry);
+        entry.cancel();
+        delete this.entries[key];
+        entryRemovalCallback();
+      }
+    };
+
     let advanced = false;
     const advanceImageRequestQueue = () => {
       if (advanced) {
@@ -80,21 +96,16 @@ export class DedupedRequest {
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
           request.cancel = this.request(key, metadata, requestFunc, callback);
+        } else {
+          removeCallbackFromEntry({
+            key,
+            entryRemovalCallback: () => {},
+            requestCallback: callback,
+          });
         }
 
         // Possibly need to do some handling of entry callbacks
         // here if queued request has been cancelled
-      }
-    };
-
-    const removeCallbackFromEntry = (entryRemovalCallback) => {
-      if (entry.result) return;
-      entry.callbacks = entry.callbacks.filter((cb) => cb !== callback);
-      if (!entry.callbacks.length) {
-        console.log("all callbacks removed, time to cancel entry", entry);
-        entry.cancel();
-        delete this.entries[key];
-        entryRemovalCallback();
       }
     };
 
@@ -153,7 +164,11 @@ export class DedupedRequest {
     }
 
     return () => {
-      removeCallbackFromEntry(advanceImageRequestQueue);
+      removeCallbackFromEntry({
+        key,
+        entryRemovalCallback: advanceImageRequestQueue,
+        requestCallback: callback,
+      });
     };
   }
 }
