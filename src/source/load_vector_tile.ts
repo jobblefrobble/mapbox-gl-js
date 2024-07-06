@@ -45,11 +45,13 @@ export class DedupedRequest {
   entries: {
     [key: string]: any;
   };
+  queuedKeys: Set<string>;
   scheduler: Scheduler | null | undefined;
 
   constructor(scheduler?: Scheduler) {
     this.entries = {};
     this.scheduler = scheduler;
+    this.queuedKeys = new Set();
   }
 
   request(
@@ -60,11 +62,7 @@ export class DedupedRequest {
   ): () => void {
     const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
 
-    const removeCallbackFromEntry = ({
-      key,
-      entryRemovalCallback,
-      requestCallback,
-    }) => {
+    const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.entries[key];
       if (entry.result) return;
       entry.callbacks = entry.callbacks.filter((cb) => cb !== requestCallback);
@@ -72,7 +70,6 @@ export class DedupedRequest {
         console.log("all callbacks removed, time to cancel entry", entry);
         entry.cancel();
         delete this.entries[key];
-        entryRemovalCallback();
       }
     };
 
@@ -95,18 +92,13 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
-          console.log("trying to request from queue", key, metadata);
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
             key,
-            entryRemovalCallback: () => {},
             requestCallback: callback,
           });
         }
-
-        // Possibly need to do some handling of entry callbacks
-        // here if queued request has been cancelled
       }
     };
 
@@ -125,6 +117,8 @@ export class DedupedRequest {
     entry.callbacks.push(callback);
 
     if (!entry.cancel) {
+      // No cancel function means this is the first request for this resource
+
       if (numImageRequests >= 1) {
         const queued = {
           key,
@@ -167,7 +161,6 @@ export class DedupedRequest {
     return () => {
       removeCallbackFromEntry({
         key,
-        entryRemovalCallback: advanceImageRequestQueue,
         requestCallback: callback,
       });
     };
