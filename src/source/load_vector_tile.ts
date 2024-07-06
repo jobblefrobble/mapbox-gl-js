@@ -92,7 +92,7 @@ export class DedupedRequest {
         if (!cancelled) {
           // Possibly need to clear entry.cancel here to ensure fetch is actually sent on the queued try?
           const entry = this.entries[key];
-          delete entry.cancel;
+          entry.requested = false;
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
@@ -117,7 +117,7 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.cancel) {
+    if (!entry.requested) {
       // No cancel function means this is the first request for this resource
 
       if (numImageRequests >= 1) {
@@ -159,6 +159,7 @@ export class DedupedRequest {
           delete this.entries[key];
         }, 1000 * 3);
       });
+      entry.requested = true;
       entry.cancel = actualRequestCancel;
     }
 
