@@ -116,7 +116,7 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.cancel) {
+    if (!entry.requested) {
       // No cancel function means this is the first request for this resource
 
       if (numImageRequests >= 1) {
@@ -156,6 +156,9 @@ export class DedupedRequest {
         setTimeout(() => delete this.entries[key], 1000 * 3);
       });
       entry.cancel = actualRequestCancel;
+
+      // Using requested flag here in case some requests are being missed due to addition of cancel handler when queueing
+      entry.requested = true;
     }
 
     return () => {
