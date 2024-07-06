@@ -92,6 +92,7 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
+          // Should we be unsetting entry.cancel here prior to kicking off request attempt?
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
@@ -116,7 +117,7 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.requested) {
+    if (!entry.cancel) {
       // No cancel function means this is the first request for this resource
 
       if (numImageRequests >= 1) {
@@ -136,7 +137,8 @@ export class DedupedRequest {
             (queueItem) => queueItem?.key === key && queueItem.cancel()
           );
         };
-        return queued.cancel;
+        return () =>
+          removeCallbackFromEntry({ key, requestCallback: callback });
       }
       numImageRequests++;
 
@@ -156,9 +158,6 @@ export class DedupedRequest {
         setTimeout(() => delete this.entries[key], 1000 * 3);
       });
       entry.cancel = actualRequestCancel;
-
-      // Using requested flag here in case some requests are being missed due to addition of cancel handler when queueing
-      entry.requested = true;
     }
 
     return () => {
