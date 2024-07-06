@@ -89,8 +89,6 @@ export class DedupedRequest {
         // eslint-disable-line
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
-        const entry = this.entries[key];
-        entry.queued = false;
         if (!cancelled) {
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
@@ -116,11 +114,10 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.requested) {
+    if (!entry.cancel) {
       // No cancel function means this is the first request for this resource
 
-      if (numImageRequests >= 1 && !entry.queued) {
-        entry.queued = true;
+      if (numImageRequests >= 1) {
         const queued = {
           key,
           metadata,
@@ -154,9 +151,11 @@ export class DedupedRequest {
             cb(err, result);
           }
         }
-        setTimeout(() => delete this.entries[key], 1000 * 3);
+        setTimeout(() => {
+          // possibly need to clear entries from queue here as well, being sure to decrement numImageRequests too
+          delete this.entries[key];
+        }, 1000 * 3);
       });
-      entry.requested = true;
       entry.cancel = actualRequestCancel;
     }
 
