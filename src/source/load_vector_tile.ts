@@ -91,9 +91,12 @@ export class DedupedRequest {
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
           // Possibly need to clear entry.cancel here to ensure fetch is actually sent on the queued try?
-          const entry = this.entries[key];
-          entry.requested = false;
-          request.cancel = this.request(key, metadata, requestFunc, callback);
+          // Seems to cause problems downstream
+          /*
+          DOMException: Failed to execute 'postMessage' on 'DedicatedWorkerGlobalScope': ArrayBuffer at index 0 is already detached.
+          */
+
+          this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
             key,
@@ -117,7 +120,7 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.requested) {
+    if (!entry.cancel) {
       // No cancel function means this is the first request for this resource
 
       if (numImageRequests >= 1) {
@@ -159,7 +162,6 @@ export class DedupedRequest {
           delete this.entries[key];
         }, 1000 * 3);
       });
-      entry.requested = true;
       entry.cancel = actualRequestCancel;
     }
 
