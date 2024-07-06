@@ -90,6 +90,9 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
+          // Possibly need to clear entry.cancel here to ensure fetch is actually sent on the queued try?
+          const entry = this.entries[key];
+          delete entry.cancel;
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
