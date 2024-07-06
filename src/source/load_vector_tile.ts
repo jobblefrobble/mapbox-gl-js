@@ -45,13 +45,11 @@ export class DedupedRequest {
   entries: {
     [key: string]: any;
   };
-  queuedKeys: Set<string>;
   scheduler: Scheduler | null | undefined;
 
   constructor(scheduler?: Scheduler) {
     this.entries = {};
     this.scheduler = scheduler;
-    this.queuedKeys = new Set();
   }
 
   request(
@@ -91,8 +89,9 @@ export class DedupedRequest {
         // eslint-disable-line
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
+        const entry = this.entries[key];
+        entry.queued = false;
         if (!cancelled) {
-          // Should we be unsetting entry.cancel here prior to kicking off request attempt?
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
@@ -117,10 +116,11 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
-    if (!entry.cancel) {
+    if (!entry.requested) {
       // No cancel function means this is the first request for this resource
 
-      if (numImageRequests >= 1) {
+      if (numImageRequests >= 1 && !entry.queued) {
+        entry.queued = true;
         const queued = {
           key,
           metadata,
@@ -137,8 +137,7 @@ export class DedupedRequest {
             (queueItem) => queueItem?.key === key && queueItem.cancel()
           );
         };
-        return () =>
-          removeCallbackFromEntry({ key, requestCallback: callback });
+        return queued.cancel;
       }
       numImageRequests++;
 
@@ -157,6 +156,7 @@ export class DedupedRequest {
         }
         setTimeout(() => delete this.entries[key], 1000 * 3);
       });
+      entry.requested = true;
       entry.cancel = actualRequestCancel;
     }
 
