@@ -60,33 +60,6 @@ export class DedupedRequest {
   ): () => void {
     const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
 
-    let advanced = false;
-    const advanceImageRequestQueue = () => {
-      if (advanced) {
-        console.log("aborting queue advancement because advanced flag is set");
-        return;
-      }
-      console.log(
-        "proceeding with queue advancement",
-        numImageRequests,
-        imageQueue.length
-      );
-      advanced = true;
-      numImageRequests--;
-      assert(numImageRequests >= 0);
-      while (imageQueue.length && numImageRequests < 1) {
-        // eslint-disable-line
-        const request = imageQueue.shift();
-        const { key, metadata, requestFunc, callback, cancelled } = request;
-        if (!cancelled) {
-          request.cancel = this.request(key, metadata, requestFunc, callback);
-        }
-
-        // Possibly need to do some handling of entry callbacks
-        // here if queued request has been cancelled
-      }
-    };
-
     if (entry.result) {
       const [err, result] = entry.result;
       if (this.scheduler) {
@@ -102,26 +75,8 @@ export class DedupedRequest {
     entry.callbacks.push(callback);
 
     if (!entry.cancel) {
-      if (numImageRequests >= 1) {
-        const queued = {
-          key,
-          metadata,
-          requestFunc,
-          callback,
-          cancelled: false,
-          cancel() {
-            this.cancelled = true;
-          },
-        };
-        imageQueue.push(queued);
-        entry.cancel = queued.cancel;
-        return queued.cancel;
-      }
-      numImageRequests++;
-
       const actualRequestCancel = requestFunc((err, result) => {
         console.log("getArrayBuffer completed successfully", entry);
-        advanceImageRequestQueue();
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
           if (this.scheduler) {
@@ -144,7 +99,6 @@ export class DedupedRequest {
         console.log("all callbacks removed, time to cancel entry", entry);
         entry.cancel();
         delete this.entries[key];
-        advanceImageRequestQueue();
       }
     };
   }
@@ -202,10 +156,46 @@ export function loadVectorTile(
     zoom: params.tileZoom,
   };
 
-  return (this.deduped as DedupedRequest).request(
+  if (numImageRequests >= 1) {
+    const queued = {
+      params,
+      callback,
+      skipParse,
+      cancelled: false,
+      cancel() {
+        this.cancelled = true;
+      },
+    };
+    imageQueue.push(queued);
+    return queued.cancel;
+  }
+  numImageRequests++;
+
+  let advanced = false;
+  const advanceImageRequestQueue = () => {
+    if (advanced) return;
+    advanced = true;
+    numImageRequests--;
+    assert(numImageRequests >= 0);
+    while (imageQueue.length && numImageRequests < 1) {
+      // eslint-disable-line
+      const request = imageQueue.shift();
+      const { params, callback, skipParse, cancelled } = request;
+      if (!cancelled) {
+        request.cancel = loadVectorTile(params, callback, skipParse);
+      }
+    }
+  };
+
+  const cancelHandler = (this.deduped as DedupedRequest).request(
     key,
     callbackMetadata,
     makeRequest,
     callback
   );
+
+  return () => {
+    cancelHandler();
+    advanceImageRequestQueue();
+  };
 }
