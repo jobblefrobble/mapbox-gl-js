@@ -86,6 +86,15 @@ export class DedupedRequest {
       callbacks: new Set(),
     });
 
+    const removeEntriesFromQueue = (key) => {
+      for (let i = imageQueue.length - 1; i >= 0; i--) {
+        if (imageQueue[i].key === key) {
+          console.log("removing entry from queue");
+          imageQueue.splice(i, 1);
+        }
+      }
+    };
+
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.entries[key];
       if (entry.result) return;
@@ -93,6 +102,7 @@ export class DedupedRequest {
       if (!entry.callbacks.size) {
         entry.cancel();
         delete this.entries[key];
+        removeEntriesFromQueue(key);
       }
     };
 
@@ -163,6 +173,7 @@ export class DedupedRequest {
             result,
           });
         }
+        removeEntriesFromQueue(key);
         advanceImageRequestQueue();
 
         // Maybe need to clear out the queue too here?
