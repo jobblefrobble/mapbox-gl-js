@@ -95,10 +95,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const perf = requestParam && requestParam.collectResourceTiming;
 
     const workerTile = (this.loading[uid] = new WorkerTile(params));
-    console.log(
-      "load tile from worker source",
-      turnKeyIntoTileCoords(params.request.url)
-    );
     workerTile.abort = this.loadVectorData(params, (err, response) => {
       const aborted = !this.loading[uid];
 
