@@ -114,7 +114,7 @@ export class DedupedRequest {
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
-      while (imageQueue.length && numImageRequests < 1) {
+      while (imageQueue.length && numImageRequests < 50) {
         // eslint-disable-line
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
@@ -142,7 +142,7 @@ export class DedupedRequest {
 
     if (!entry.cancel || fromQueue) {
       // Lack of attached cancel handler means this is the first request for this resource
-      if (numImageRequests >= 1) {
+      if (numImageRequests >= 50) {
         const queued = {
           key,
           metadata,
