@@ -80,8 +80,11 @@ export class DedupedRequest {
     key: string,
     metadata: any,
     requestFunc: any,
-    callback: LoadVectorDataCallback
+    callback: LoadVectorDataCallback,
+    fromQueue?: boolean
   ): () => void {
+    console.log("making request", turnKeyIntoTileCoords(key));
+
     const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
@@ -111,7 +114,13 @@ export class DedupedRequest {
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
           console.log("requesting from queue", turnKeyIntoTileCoords(key));
-          request.cancel = this.request(key, metadata, requestFunc, callback);
+          request.cancel = this.request(
+            key,
+            metadata,
+            requestFunc,
+            callback,
+            true
+          );
         } else {
           removeCallbackFromEntry({
             key,
@@ -131,7 +140,7 @@ export class DedupedRequest {
 
     // Think this might be the crux of tiles getting missed! If we attach cancel
     // If more requests come in before queued request is being brought in and clog the queue again
-    if (!entry.cancel) {
+    if (!entry.cancel || fromQueue) {
       // No cancel function means this is the first request for this resource
 
       if (numImageRequests >= 1) {
