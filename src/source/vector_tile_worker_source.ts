@@ -21,6 +21,7 @@ import type Scheduler from "../util/scheduler";
 import type { LoadVectorData } from "./load_vector_tile";
 
 const turnKeyIntoTileCoords = (key: string) => {
+  if (!key) return;
   const splitByPbf = key.split(".pbf");
   const splitBySlash = splitByPbf[0].split("/");
   const z = splitBySlash[splitBySlash.length - 3];
@@ -156,7 +157,7 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
 
       console.log(
         "worker source about to parseTile",
-        turnKeyIntoTileCoords(requestParam.url),
+        turnKeyIntoTileCoords(requestParam?.url),
         this.isSpriteLoaded
       );
 
