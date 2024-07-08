@@ -96,10 +96,13 @@ export class DedupedRequest {
       const entry = this.getEntry(key);
       if (entry.result) return;
       entry.callbacks.delete(requestCallback);
-      if (!entry.callbacks.size) {
-        entry.cancel();
-        delete this.entries[key];
+      if (entry.callbacks.size) {
+        return;
       }
+      if (entry.cancel) {
+        entry.cancel();
+      }
+      delete this.entries[key];
     };
 
     let advanced = false;
