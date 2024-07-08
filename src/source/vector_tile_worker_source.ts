@@ -28,7 +28,7 @@ const turnKeyIntoTileCoords = (key: string) => {
   const z = splitBySlash[splitBySlash.length - 3];
   const x = splitBySlash[splitBySlash.length - 2];
   const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
-  return `${layerId},${z}/${x}/${y}`;
+  return `${layerId}/${z}/${x}/${y}`;
 };
 
 /**
