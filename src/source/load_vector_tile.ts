@@ -47,13 +47,11 @@ export class DedupedRequest {
   entries: {
     [key: string]: any;
   };
-  queuedKeys: Set<string>;
   scheduler: Scheduler | null | undefined;
 
   constructor(scheduler?: Scheduler) {
     this.entries = {};
     this.scheduler = scheduler;
-    this.queuedKeys = new Set();
   }
 
   addToSchedulerOrCallDirectly({
@@ -84,6 +82,7 @@ export class DedupedRequest {
     fromQueue?: boolean
   ): () => void {
     const entry = (this.entries[key] = this.entries[key] || {
+      // use a set to avoid duplicate callbacks being added when calling from queue
       callbacks: new Set(),
     });
 
