@@ -105,6 +105,10 @@ export class DedupedRequest {
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
+      console.log(
+        "config.MAX_PARALLEL_VECTOR_TILE_REQUESTS",
+        config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
+      );
       while (
         imageQueue.length &&
         numImageRequests < config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
