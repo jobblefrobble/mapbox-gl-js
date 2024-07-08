@@ -111,6 +111,11 @@ export class DedupedRequest {
       if (advanced) {
         return;
       }
+      console.log(
+        "advancing image request queue",
+        numImageRequests,
+        imageQueue.length
+      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
