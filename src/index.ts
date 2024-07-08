@@ -197,10 +197,12 @@ const exported = {
      * mapboxgl.maxParallelVectorTileRequests = 10;
      */
     get maxParallelVectorTileRequests(): number {
+        console.log("getting max requests", config.MAX_PARALLEL_VECTOR_TILE_REQUESTS);
         return config.MAX_PARALLEL_VECTOR_TILE_REQUESTS;
     },
 
     set maxParallelVectorTileRequests(numRequests: number) {
+        console.log("setting maxParallelVectorTileRequests to", numRequests);
         config.MAX_PARALLEL_VECTOR_TILE_REQUESTS = numRequests;
     },
 

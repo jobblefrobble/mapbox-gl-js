@@ -329,6 +329,7 @@ export const getImage = function(
     }
 
     // limit concurrent image loads to help with raster sources performance on big screens
+    console.log("rasters config ", config);
     if (numImageRequests >= config.MAX_PARALLEL_IMAGE_REQUESTS) {
         const queued = {
             requestParameters,

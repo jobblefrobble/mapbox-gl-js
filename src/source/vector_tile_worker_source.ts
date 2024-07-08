@@ -6,6 +6,7 @@ import { getPerformanceMeasurement } from "../util/performance";
 import { Evented } from "../util/evented";
 import tileTransform from "../geo/projection/tile_transform";
 import { loadVectorTile, DedupedRequest } from "./load_vector_tile";
+import config from "../util/config";
 
 import type {
   WorkerSource,
@@ -95,6 +96,11 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const perf = requestParam && requestParam.collectResourceTiming;
 
     const workerTile = (this.loading[uid] = new WorkerTile(params));
+    console.log(
+      "worker source config",
+      config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
+    );
+
     workerTile.abort = this.loadVectorData(params, (err, response) => {
       const aborted = !this.loading[uid];
 

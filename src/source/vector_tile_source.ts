@@ -9,6 +9,7 @@ import browser from "../util/browser";
 import { cacheEntryPossiblyAdded } from "../util/tile_request_cache";
 import { DedupedRequest, loadVectorTile } from "./load_vector_tile";
 import { makeFQID } from "../util/fqid";
+import config from "../util/config";
 
 import type { ISource } from "./source";
 import type { OverscaledTileID } from "./tile_id";
@@ -297,13 +298,14 @@ class VectorTileSource extends Evented implements ISource {
       tessellationStep: this.map._tessellationStep,
     };
     params.request.collectResourceTiming = this._collectResourceTiming;
-
     if (!tile.actor || tile.state === "expired") {
       tile.actor = this._tileWorkers[url] =
         this._tileWorkers[url] || this.dispatcher.getActor();
 
       // if workers are not ready to receive messages yet, use the idle time to preemptively
       // load tiles on the main thread and pass the result instead of requesting a worker to do so
+      const maxTileRequests = config.MAX_PARALLEL_VECTOR_TILE_REQUESTS;
+
       if (!this.dispatcher.ready) {
         const cancel = loadVectorTile.call(
           { deduped: this._deduped },
@@ -328,7 +330,8 @@ class VectorTileSource extends Evented implements ISource {
                 );
             }
           },
-          true
+          true,
+          maxTileRequests
         );
         tile.request = { cancel };
       } else {

@@ -106,9 +106,11 @@ export class DedupedRequest {
       numImageRequests--;
       assert(numImageRequests >= 0);
       console.log(
-        "config.MAX_PARALLEL_VECTOR_TILE_REQUESTS",
+        "inside tile queue config.MAX_PARALLEL_VECTOR_TILE_REQUESTS",
         config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
       );
+      console.log("vectors config ", config);
+
       while (
         imageQueue.length &&
         numImageRequests < config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
@@ -203,7 +205,7 @@ const turnKeyIntoTileCoords = (key: string) => {
 export function loadVectorTile(
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback,
-  skipParse?: boolean
+  skipParse?: boolean,
 ): () => void {
   const key = JSON.stringify(params.request);
 
