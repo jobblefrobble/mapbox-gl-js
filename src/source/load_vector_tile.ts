@@ -5,6 +5,7 @@ import { VectorTile } from "@mapbox/vector-tile";
 import Protobuf from "pbf";
 import { getArrayBuffer } from "../util/ajax";
 import assert from "assert";
+import config from "../util/config";
 
 // @ts-expect-error - TS2300 - Duplicate identifier 'VectorTile'.
 import type { VectorTile } from "@mapbox/vector-tile";
@@ -104,7 +105,10 @@ export class DedupedRequest {
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
-      while (imageQueue.length && numImageRequests < 1) {
+      while (
+        imageQueue.length &&
+        numImageRequests < config.MAX_PARALLEL_VECTOR_TILE_REQUESTS
+      ) {
         // eslint-disable-line
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
@@ -132,7 +136,7 @@ export class DedupedRequest {
 
     if (!entry.cancel || fromQueue) {
       // Lack of attached cancel handler means this is the first request for this resource
-      if (numImageRequests >= 1) {
+      if (numImageRequests >= config.MAX_PARALLEL_VECTOR_TILE_REQUESTS) {
         const queued = {
           key,
           metadata,

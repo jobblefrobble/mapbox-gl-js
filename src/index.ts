@@ -187,6 +187,24 @@ const exported = {
     },
 
     /**
+     * Gets and sets the maximum number of vector tiles to load in parallel.
+     * 200 by default. There is no maximum value, but for maps with many vector tile sources
+     * browser resources can be overwhelmed by concurrent requests.
+     *
+     * @var {string} maxParallelVectorTileRequests
+     * @returns {number} Number of parallel requests currently configured.
+     * @example
+     * mapboxgl.maxParallelVectorTileRequests = 10;
+     */
+    get maxParallelVectorTileRequests(): number {
+        return config.MAX_PARALLEL_VECTOR_TILE_REQUESTS;
+    },
+
+    set maxParallelVectorTileRequests(numRequests: number) {
+        config.MAX_PARALLEL_VECTOR_TILE_REQUESTS = numRequests;
+    },
+
+    /**
      * Clears browser storage used by this library. Using this method flushes the Mapbox tile
      * cache that is managed by this library. Tiles may still be cached by the browser
      * in some cases.

@@ -15,6 +15,7 @@ type Config = {
     RASTERARRAYS_URL_PREFIX: string;
     ACCESS_TOKEN: string | null | undefined;
     MAX_PARALLEL_IMAGE_REQUESTS: number;
+    MAX_PARALLEL_VECTOR_TILE_REQUESTS: number;
     DRACO_URL: string;
     MESHOPT_URL: string;
     MESHOPT_SIMD_URL: string;
@@ -82,6 +83,7 @@ const config: Config = {
     ACCESS_TOKEN: null,
     DEFAULT_STYLE: 'mapbox://styles/mapbox/standard',
     MAX_PARALLEL_IMAGE_REQUESTS: 16,
+    MAX_PARALLEL_VECTOR_TILE_REQUESTS: 200,
     DRACO_URL: 'https://api.mapbox.com/mapbox-gl-js/draco_decoder_gltf_v1.5.6.wasm',
     MESHOPT_URL: 'https://api.mapbox.com/mapbox-gl-js/meshopt_base_v0.20.wasm',
     MESHOPT_SIMD_URL: 'https://api.mapbox.com/mapbox-gl-js/meshopt_simd_v0.20.wasm',
