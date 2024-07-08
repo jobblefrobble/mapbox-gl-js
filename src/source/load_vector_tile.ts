@@ -168,6 +168,7 @@ export class DedupedRequest {
       numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
+        console.log("getArrayBuffer resolved", turnKeyIntoTileCoords(key));
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
           this.addToSchedulerOrCallDirectly({

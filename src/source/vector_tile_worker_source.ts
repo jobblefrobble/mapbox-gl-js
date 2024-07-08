@@ -154,6 +154,12 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
         );
       };
 
+      console.log(
+        "worker source about to parseTile",
+        turnKeyIntoTileCoords(requestParam.url),
+        this.isSpriteLoaded
+      );
+
       if (this.isSpriteLoaded) {
         parseTile();
       } else {
