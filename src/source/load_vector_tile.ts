@@ -1,3 +1,5 @@
+/* eslint-disable object-curly-spacing */
+/* eslint-disable indent */
 // @ts-expect-error - TS2300 - Duplicate identifier 'VectorTile'.
 import { VectorTile } from "@mapbox/vector-tile";
 import Protobuf from "pbf";
@@ -108,6 +110,7 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
+          console.log("requesting from queue", turnKeyIntoTileCoords(key));
           request.cancel = this.request(key, metadata, requestFunc, callback);
         } else {
           removeCallbackFromEntry({
@@ -126,6 +129,8 @@ export class DedupedRequest {
 
     entry.callbacks.push(callback);
 
+    // Think this might be the crux of tiles getting missed! If we attach cancel
+    // If more requests come in before queued request is being brought in and clog the queue again
     if (!entry.cancel) {
       // No cancel function means this is the first request for this resource
 
@@ -151,7 +156,10 @@ export class DedupedRequest {
       numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
-        console.log("getArrayBuffer completed successfully", entry);
+        console.log(
+          "getArrayBuffer completed successfully",
+          turnKeyIntoTileCoords(key)
+        );
         advanceImageRequestQueue();
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
@@ -176,6 +184,15 @@ export class DedupedRequest {
     };
   }
 }
+
+const turnKeyIntoTileCoords = (key: string) => {
+  const splitByPbf = key.split(".pbf");
+  const splitBySlash = splitByPbf[0].split("/");
+  const z = splitBySlash[splitBySlash.length - 3];
+  const x = splitBySlash[splitBySlash.length - 2];
+  const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
+  return { z, x, y };
+};
 
 /**
  * @private
