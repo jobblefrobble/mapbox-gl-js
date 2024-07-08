@@ -83,8 +83,6 @@ export class DedupedRequest {
     callback: LoadVectorDataCallback,
     fromQueue?: boolean
   ): () => void {
-    console.log("making request", turnKeyIntoTileCoords(key));
-
     const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
@@ -92,7 +90,10 @@ export class DedupedRequest {
       if (entry.result) return;
       entry.callbacks = entry.callbacks.filter((cb) => cb !== requestCallback);
       if (!entry.callbacks.length) {
-        console.log("all callbacks removed, time to cancel entry", entry);
+        console.log(
+          "all callbacks removed, time to cancel entry",
+          turnKeyIntoTileCoords(key)
+        );
         entry.cancel();
         delete this.entries[key];
       }
@@ -104,7 +105,7 @@ export class DedupedRequest {
         console.log("aborting queue advancement because advanced flag is set");
         return;
       }
-      console.log("advancing queue", numImageRequests, imageQueue.length);
+      // console.log("advancing queue", numImageRequests, imageQueue.length);
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -166,11 +167,18 @@ export class DedupedRequest {
 
       const actualRequestCancel = requestFunc((err, result) => {
         console.log(
-          "getArrayBuffer completed successfully",
-          turnKeyIntoTileCoords(key)
+          "request completed successfully",
+          turnKeyIntoTileCoords(key),
+          err,
+          result
         );
-        advanceImageRequestQueue();
         entry.result = [err, result];
+        console.log(
+          "callbacks",
+          turnKeyIntoTileCoords(key),
+          entry.callbacks.length,
+          entry.callbacks
+        );
         for (const cb of entry.callbacks) {
           this.addToSchedulerOrCallDirectly({
             callback: cb,
@@ -179,6 +187,8 @@ export class DedupedRequest {
             result,
           });
         }
+        advanceImageRequestQueue();
+
         // Maybe need to clear out the queue too here?
         setTimeout(() => delete this.entries[key], 1000 * 3);
       });
@@ -200,7 +210,7 @@ const turnKeyIntoTileCoords = (key: string) => {
   const z = splitBySlash[splitBySlash.length - 3];
   const x = splitBySlash[splitBySlash.length - 2];
   const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
-  return { z, x, y };
+  return `${z}/${x}/${y}`;
 };
 
 /**
@@ -225,6 +235,11 @@ export function loadVectorTile(
         if (err) {
           callback(err);
         } else if (data) {
+          console.log(
+            "getArrayBuffer resolved",
+            turnKeyIntoTileCoords(key),
+            data
+          );
           callback(null, {
             vectorTile: skipParse
               ? undefined
@@ -237,12 +252,18 @@ export function loadVectorTile(
       }
     );
     return () => {
+      console.log("makeRequest cancel", turnKeyIntoTileCoords(key));
       request.cancel();
       callback();
     };
   };
 
   if (params.data) {
+    console.log(
+      "got data from main thread",
+      turnKeyIntoTileCoords(key),
+      params.data
+    );
     // if we already got the result earlier (on the main thread), return it directly
     (this.deduped as DedupedRequest).entries[key] = {
       result: [null, params.data],
