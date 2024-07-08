@@ -83,17 +83,15 @@ export class DedupedRequest {
     callback: LoadVectorDataCallback,
     fromQueue?: boolean
   ): () => void {
-    const entry = (this.entries[key] = this.entries[key] || { callbacks: [] });
+    const entry = (this.entries[key] = this.entries[key] || {
+      callbacks: new Set(),
+    });
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.entries[key];
       if (entry.result) return;
-      entry.callbacks = entry.callbacks.filter((cb) => cb !== requestCallback);
-      if (!entry.callbacks.length) {
-        console.log(
-          "all callbacks removed, time to cancel entry",
-          turnKeyIntoTileCoords(key)
-        );
+      entry.callbacks.delete(requestCallback);
+      if (!entry.callbacks.size) {
         entry.cancel();
         delete this.entries[key];
       }
@@ -105,7 +103,6 @@ export class DedupedRequest {
         console.log("aborting queue advancement because advanced flag is set");
         return;
       }
-      // console.log("advancing queue", numImageRequests, imageQueue.length);
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -114,7 +111,6 @@ export class DedupedRequest {
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
-          console.log("requesting from queue", turnKeyIntoTileCoords(key));
           request.cancel = this.request(
             key,
             metadata,
@@ -123,10 +119,7 @@ export class DedupedRequest {
             true
           );
         } else {
-          removeCallbackFromEntry({
-            key,
-            requestCallback: callback,
-          });
+          removeCallbackFromEntry({ key, requestCallback: callback });
         }
       }
     };
@@ -137,13 +130,10 @@ export class DedupedRequest {
       return () => {};
     }
 
-    entry.callbacks.push(callback);
+    entry.callbacks.add(callback);
 
-    // Think this might be the crux of tiles getting missed! If we attach cancel
-    // If more requests come in before queued request is being brought in and clog the queue again
     if (!entry.cancel || fromQueue) {
-      // No cancel function means this is the first request for this resource
-
+      // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 1) {
         const queued = {
           key,
@@ -158,7 +148,7 @@ export class DedupedRequest {
         imageQueue.push(queued);
         entry.cancel = () => {
           imageQueue.forEach(
-            (queueItem) => queueItem?.key === key && queueItem.cancel()
+            (queueItem) => queueItem.key === key && queueItem.cancel()
           );
         };
         return queued.cancel;
@@ -166,19 +156,7 @@ export class DedupedRequest {
       numImageRequests++;
 
       const actualRequestCancel = requestFunc((err, result) => {
-        console.log(
-          "request completed successfully",
-          turnKeyIntoTileCoords(key),
-          err,
-          result
-        );
         entry.result = [err, result];
-        console.log(
-          "callbacks",
-          turnKeyIntoTileCoords(key),
-          entry.callbacks.length,
-          entry.callbacks
-        );
         for (const cb of entry.callbacks) {
           this.addToSchedulerOrCallDirectly({
             callback: cb,
@@ -235,11 +213,6 @@ export function loadVectorTile(
         if (err) {
           callback(err);
         } else if (data) {
-          console.log(
-            "getArrayBuffer resolved",
-            turnKeyIntoTileCoords(key),
-            data
-          );
           callback(null, {
             vectorTile: skipParse
               ? undefined
@@ -252,18 +225,12 @@ export function loadVectorTile(
       }
     );
     return () => {
-      console.log("makeRequest cancel", turnKeyIntoTileCoords(key));
       request.cancel();
       callback();
     };
   };
 
   if (params.data) {
-    console.log(
-      "got data from main thread",
-      turnKeyIntoTileCoords(key),
-      params.data
-    );
     // if we already got the result earlier (on the main thread), return it directly
     (this.deduped as DedupedRequest).entries[key] = {
       result: [null, params.data],
