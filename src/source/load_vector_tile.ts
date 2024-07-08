@@ -54,6 +54,26 @@ export class DedupedRequest {
     this.queuedKeys = new Set();
   }
 
+  addToSchedulerOrCallDirectly({
+    callback,
+    metadata,
+    err,
+    result,
+  }: {
+    callback: LoadVectorDataCallback;
+    metadata: any;
+    err: Error | null | undefined;
+    result: any;
+  }) {
+    if (this.scheduler) {
+      this.scheduler.add(() => {
+        callback(err, result);
+      }, metadata);
+    } else {
+      callback(err, result);
+    }
+  }
+
   request(
     key: string,
     metadata: any,
@@ -79,11 +99,7 @@ export class DedupedRequest {
         console.log("aborting queue advancement because advanced flag is set");
         return;
       }
-      console.log(
-        "proceeding with queue advancement",
-        numImageRequests,
-        imageQueue.length
-      );
+      console.log("advancing queue", numImageRequests, imageQueue.length);
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -104,13 +120,7 @@ export class DedupedRequest {
 
     if (entry.result) {
       const [err, result] = entry.result;
-      if (this.scheduler) {
-        this.scheduler.add(() => {
-          callback(err, result);
-        }, metadata);
-      } else {
-        callback(err, result);
-      }
+      this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
     }
 
@@ -145,14 +155,14 @@ export class DedupedRequest {
         advanceImageRequestQueue();
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
-          if (this.scheduler) {
-            this.scheduler.add(() => {
-              cb(err, result);
-            }, metadata);
-          } else {
-            cb(err, result);
-          }
+          this.addToSchedulerOrCallDirectly({
+            callback: cb,
+            metadata,
+            err,
+            result,
+          });
         }
+        // Maybe need to clear out the queue too here?
         setTimeout(() => delete this.entries[key], 1000 * 3);
       });
       entry.cancel = actualRequestCancel;
