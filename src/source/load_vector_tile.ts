@@ -196,12 +196,14 @@ export class DedupedRequest {
 }
 
 const turnKeyIntoTileCoords = (key: string) => {
+  if (!key) return;
   const splitByPbf = key.split(".pbf");
   const splitBySlash = splitByPbf[0].split("/");
+  const layerId = splitBySlash[splitBySlash.length - 4];
   const z = splitBySlash[splitBySlash.length - 3];
   const x = splitBySlash[splitBySlash.length - 2];
   const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
-  return `${z}/${x}/${y}`;
+  return `${layerId},${z}/${x}/${y}`;
 };
 
 /**
@@ -226,6 +228,7 @@ export function loadVectorTile(
         if (err) {
           callback(err);
         } else if (data) {
+          console.log("tile expiry", turnKeyIntoTileCoords(key), expires);
           callback(null, {
             vectorTile: skipParse
               ? undefined
