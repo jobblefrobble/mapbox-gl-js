@@ -74,6 +74,15 @@ export class DedupedRequest {
     }
   }
 
+  getEntry = (key: string) => {
+    return (
+      this.entries[key] || {
+        // use a set to avoid duplicate callbacks being added when calling from queue
+        callbacks: new Set(),
+      }
+    );
+  };
+
   request(
     key: string,
     metadata: any,
@@ -81,13 +90,10 @@ export class DedupedRequest {
     callback: LoadVectorDataCallback,
     fromQueue?: boolean
   ): () => void {
-    const entry = (this.entries[key] = this.entries[key] || {
-      // use a set to avoid duplicate callbacks being added when calling from queue
-      callbacks: new Set(),
-    });
+    const entry = (this.entries[key] = this.getEntry(key));
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
-      const entry = this.entries[key];
+      const entry = this.getEntry(key);
       if (entry.result) return;
       entry.callbacks.delete(requestCallback);
       if (!entry.callbacks.size) {
@@ -101,6 +107,11 @@ export class DedupedRequest {
       if (advanced) {
         return;
       }
+      console.log(
+        "advancing request queue",
+        numImageRequests,
+        imageQueue.length
+      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
