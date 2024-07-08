@@ -99,7 +99,6 @@ export class DedupedRequest {
     let advanced = false;
     const advanceImageRequestQueue = () => {
       if (advanced) {
-        console.log("aborting queue advancement because advanced flag is set");
         return;
       }
       advanced = true;
