@@ -351,7 +351,7 @@ class VectorTileSource extends Evented implements ISource {
         tile.request = { cancel };
       } else {
         console.log(
-          "sending loadTile to tile.actor",
+          "sending loadTile to tile.actor after initialising actor",
           turnKeyIntoTileCoords(url),
           params.uid
         );

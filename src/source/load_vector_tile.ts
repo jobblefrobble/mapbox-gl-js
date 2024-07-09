@@ -142,6 +142,7 @@ export class DedupedRequest {
     };
 
     if (entry.result) {
+      console.log("entry.result exists", turnKeyIntoTileCoords(key));
       const [err, result] = entry.result;
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
@@ -151,7 +152,11 @@ export class DedupedRequest {
 
     entry.callbacks.add(callback);
 
-    console.log("entry.cancel", turnKeyIntoTileCoords(key), entry.cancel);
+    console.log(
+      "entry.cancel",
+      turnKeyIntoTileCoords(key),
+      typeof entry.cancel
+    );
 
     if (!entry.cancel || fromQueue) {
       console.log(
@@ -174,11 +179,11 @@ export class DedupedRequest {
         };
         console.log("adding to queue", turnKeyIntoTileCoords(key));
         imageQueue.push(queued);
-        entry.cancel = () => {
-          imageQueue.forEach(
-            (queueItem) => queueItem.key === key && queueItem.cancel()
-          );
-        };
+        // entry.cancel = () => {
+        //   imageQueue.forEach(
+        //     (queueItem) => queueItem.key === key && queueItem.cancel()
+        //   );
+        // };
         return queued.cancel;
       }
       numImageRequests++;
