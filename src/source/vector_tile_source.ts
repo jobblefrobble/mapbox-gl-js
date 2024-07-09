@@ -350,6 +350,11 @@ class VectorTileSource extends Evented implements ISource {
         );
         tile.request = { cancel };
       } else {
+        console.log(
+          "sending loadTile to tile.actor",
+          turnKeyIntoTileCoords(url),
+          params.uid
+        );
         tile.request = tile.actor.send(
           "loadTile",
           params,
@@ -366,11 +371,7 @@ class VectorTileSource extends Evented implements ISource {
     }
 
     function done(err?: Error | null, data?: WorkerTileResult | null) {
-      console.log(
-        "done handler in vector_tile_source",
-        turnKeyIntoTileCoords(params?.request?.url),
-        tile?.uid
-      );
+      console.log("done handler in vector_tile_source", tile?.uid);
       delete tile.request;
 
       if (tile.aborted) return callback(null);
