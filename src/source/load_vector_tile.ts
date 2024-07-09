@@ -215,7 +215,7 @@ export function loadVectorTile(
   skipParse?: boolean
 ): () => void {
   const key = JSON.stringify(params.request);
-  console.log("loading vector tile", turnKeyIntoTileCoords(key));
+  console.log("calling loadVectorTile", turnKeyIntoTileCoords(key));
 
   const makeRequest = (callback: LoadVectorDataCallback) => {
     const request = getArrayBuffer(
@@ -230,7 +230,7 @@ export function loadVectorTile(
           callback(err);
         } else if (data) {
           console.log(
-            "tile should skip parse",
+            "makeRequest resolution",
             turnKeyIntoTileCoords(key),
             skipParse
           );
@@ -252,6 +252,7 @@ export function loadVectorTile(
   };
 
   if (params.data) {
+    console.log("got params.data", turnKeyIntoTileCoords(key));
     // if we already got the result earlier (on the main thread), return it directly
     (this.deduped as DedupedRequest).entries[key] = {
       result: [null, params.data],
