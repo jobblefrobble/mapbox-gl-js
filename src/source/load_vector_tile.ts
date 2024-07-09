@@ -97,7 +97,7 @@ export class DedupedRequest {
       "cancel",
       entry?.cancel,
       "callbacks",
-      [...entry?.callbacks],
+      entry?.callbacks,
       "result exists",
       Boolean(entry.result)
     );
