@@ -25,6 +25,17 @@ import type Actor from "../util/actor";
 import type { LoadVectorTileResult } from "./load_vector_tile";
 import type { WorkerTileResult } from "./worker_source";
 
+const turnKeyIntoTileCoords = (key: string) => {
+  if (!key) return;
+  const splitByPbf = key.split(".pbf");
+  const splitBySlash = splitByPbf[0].split("/");
+  const layerId = splitBySlash[splitBySlash.length - 4];
+  const z = splitBySlash[splitBySlash.length - 3];
+  const x = splitBySlash[splitBySlash.length - 2];
+  const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
+  return `${layerId}/${z}/${x}/${y}`;
+};
+
 /**
  * A source containing vector tiles in [Mapbox Vector Tile format](https://docs.mapbox.com/vector-tiles/reference/).
  * See the [Style Specification](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#vector) for detailed documentation of options.
@@ -375,11 +386,21 @@ class VectorTileSource extends Evented implements ISource {
   }
 
   abortTile(tile: Tile) {
+    console.log(
+      "abortTile in vector_tile_source",
+      turnKeyIntoTileCoords(tile?.request?.url),
+      tile?.uid
+    );
     if (tile.request) {
       tile.request.cancel();
       delete tile.request;
     }
     if (tile.actor) {
+      console.log(
+        "vector_tile_source asking tile actor to abort",
+        turnKeyIntoTileCoords(tile?.request?.url),
+        tile?.uid
+      );
       tile.actor.send("abortTile", {
         uid: tile.uid,
         type: this.type,
