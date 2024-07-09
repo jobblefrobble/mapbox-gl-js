@@ -142,6 +142,10 @@ export class DedupedRequest {
             true
           );
         } else {
+          console.log(
+            "removeCallbackFromEntry from queue",
+            turnKeyIntoTileCoords(key)
+          );
           removeCallbackFromEntry({ key, requestCallback: callback });
         }
       }
@@ -215,6 +219,10 @@ export class DedupedRequest {
     console.log("returning cancel from dedupe", turnKeyIntoTileCoords(key));
 
     return () => {
+      console.log(
+        "removeCallbackFromEntry from overall cancel",
+        turnKeyIntoTileCoords(key)
+      );
       removeCallbackFromEntry({
         key,
         requestCallback: callback,
