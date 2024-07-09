@@ -215,6 +215,7 @@ export function loadVectorTile(
   skipParse?: boolean
 ): () => void {
   const key = JSON.stringify(params.request);
+  console.log("loading vector tile", turnKeyIntoTileCoords(key));
 
   const makeRequest = (callback: LoadVectorDataCallback) => {
     const request = getArrayBuffer(
@@ -228,7 +229,11 @@ export function loadVectorTile(
         if (err) {
           callback(err);
         } else if (data) {
-          console.log("tile expiry", turnKeyIntoTileCoords(key), expires);
+          console.log(
+            "tile should skip parse",
+            turnKeyIntoTileCoords(key),
+            skipParse
+          );
           callback(null, {
             vectorTile: skipParse
               ? undefined
