@@ -167,26 +167,26 @@ export class DedupedRequest {
     if (!entry.cancel || fromQueue) {
       console.log("no entry.cancel", turnKeyIntoTileCoords(key));
       // Lack of attached cancel handler means this is the first request for this resource
-      if (numImageRequests >= 50) {
-        const queued = {
-          key,
-          metadata,
-          requestFunc,
-          callback,
-          cancelled: false,
-          cancel() {
-            this.cancelled = true;
-          },
-        };
-        console.log("adding to queue", turnKeyIntoTileCoords(key));
-        imageQueue.push(queued);
-        entry.cancel = () => {
-          imageQueue.forEach(
-            (queueItem) => queueItem.key === key && queueItem.cancel()
-          );
-        };
-        return queued.cancel;
-      }
+      // if (numImageRequests >= 50) {
+      //   const queued = {
+      //     key,
+      //     metadata,
+      //     requestFunc,
+      //     callback,
+      //     cancelled: false,
+      //     cancel() {
+      //       this.cancelled = true;
+      //     },
+      //   };
+      //   console.log("adding to queue", turnKeyIntoTileCoords(key));
+      //   imageQueue.push(queued);
+      //   entry.cancel = () => {
+      //     imageQueue.forEach(
+      //       (queueItem) => queueItem.key === key && queueItem.cancel()
+      //     );
+      //   };
+      //   return queued.cancel;
+      // }
       numImageRequests++;
 
       console.log("firing request", turnKeyIntoTileCoords(key));
@@ -201,7 +201,7 @@ export class DedupedRequest {
             result,
           });
         }
-        advanceImageRequestQueue();
+        // advanceImageRequestQueue();
 
         // Maybe need to clear out the queue too here?
         setTimeout(() => {
