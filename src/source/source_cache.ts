@@ -744,7 +744,7 @@ class SourceCache extends Evented {
     // the most ideal tile for the current viewport. This may include tiles like
     // parent or child tiles that are *already* loaded.
     const retain = this._updateRetainedTiles(idealTileIDs);
-    if (this._source.id.includes("425")) {
+    if (this._source.id === "vector-datasets-source__,,__434") {
       console.log("retain", retain);
     }
 
