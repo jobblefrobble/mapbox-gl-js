@@ -814,7 +814,12 @@ class SourceCache extends Evented {
       if (tile.hasSymbolBuckets && !tile.holdingForFade()) {
         tile.setHoldDuration(this.map._fadeDuration);
       } else if (!tile.hasSymbolBuckets || tile.symbolFadeFinished()) {
-        console.log("removing in fade check", tileID);
+        console.log(
+          "removing in fade check",
+          "source ID",
+          this._source?.id,
+          tileID
+        );
         this._removeTile(+tileID);
       }
     }
@@ -830,7 +835,12 @@ class SourceCache extends Evented {
   releaseSymbolFadeTiles() {
     for (const id in this._tiles) {
       if (this._tiles[id].holdingForFade()) {
-        console.log("releaseSymbolFadeTiles", id);
+        console.log(
+          "releaseSymbolFadeTiles",
+          "source ID",
+          this._source?.id,
+          id
+        );
         this._removeTile(+id);
       }
     }
@@ -1092,6 +1102,8 @@ class SourceCache extends Evented {
     } else {
       console.log(
         "Tile removed in _removeTile source_cache",
+        "source ID",
+        this._source?.id,
         "tile id\n",
         id,
         tile?.uid
@@ -1111,7 +1123,12 @@ class SourceCache extends Evented {
     this._paused = false;
 
     for (const id in this._tiles) {
-      console.log("removing through clearTile", id);
+      console.log(
+        "removing through clearTile",
+        "source ID",
+        this._source?.id,
+        id
+      );
       this._removeTile(+id);
     }
 
