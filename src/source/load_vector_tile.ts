@@ -158,7 +158,11 @@ export class DedupedRequest {
 
     entry.callbacks.add(callback);
 
-    console.log("entry.cancel", JSON.stringify(entry.cancel));
+    console.log(
+      "entry.cancel",
+      turnKeyIntoTileCoords(key),
+      JSON.stringify(entry.cancel)
+    );
 
     if (!entry.cancel || fromQueue) {
       console.log("no entry.cancel", turnKeyIntoTileCoords(key));
