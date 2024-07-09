@@ -366,6 +366,11 @@ class VectorTileSource extends Evented implements ISource {
     }
 
     function done(err?: Error | null, data?: WorkerTileResult | null) {
+      console.log(
+        "done handler in vector_tile_source",
+        turnKeyIntoTileCoords(params?.request?.url),
+        tile?.uid
+      );
       delete tile.request;
 
       if (tile.aborted) return callback(null);
@@ -379,6 +384,12 @@ class VectorTileSource extends Evented implements ISource {
         tile.resourceTiming = data.resourceTiming;
 
       if (this.map._refreshExpiredTiles && data) tile.setExpiryData(data);
+
+      console.log(
+        "setting tile state to loaded!",
+        turnKeyIntoTileCoords(params?.request?.url),
+        tile.uid
+      );
       tile.loadVectorData(data, this.map.painter);
 
       cacheEntryPossiblyAdded(this.dispatcher);
