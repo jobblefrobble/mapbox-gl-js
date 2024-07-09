@@ -94,7 +94,12 @@ export class DedupedRequest {
     console.log(
       "deduped request",
       turnKeyIntoTileCoords(key),
-      Object.keys(this.entries[key])
+      "cancel",
+      JSON.stringify(entry?.cancel),
+      "callbacks",
+      JSON.stringify(entry?.callbacks),
+      "result exists",
+      Boolean(entry.result)
     );
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
