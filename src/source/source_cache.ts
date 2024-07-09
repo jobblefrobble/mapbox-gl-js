@@ -201,7 +201,8 @@ class SourceCache extends Evented {
     if (this._source.abortTile) {
       console.log(
         "aborting tile from cache",
-        tile?.uidturnKeyIntoTileCoords(tile.request?.url)
+        tile?.uid,
+        turnKeyIntoTileCoords(tile.request?.url)
       );
       return this._source.abortTile(tile);
     }
