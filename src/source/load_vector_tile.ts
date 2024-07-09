@@ -166,13 +166,12 @@ export class DedupedRequest {
           });
         }
         advanceImageRequestQueue();
-        delete this.entries[key];
 
         // Maybe need to clear out the queue too here?
-        // setTimeout(() => {
-        //   console.log("deleting entry for", turnKeyIntoTileCoords(key));
-        //   delete this.entries[key];
-        // }, 1000 * 3);
+        setTimeout(() => {
+          imageQueue = imageQueue.filter((queued) => queued.key !== key);
+          delete this.entries[key];
+        }, 1000 * 3);
       });
       entry.cancel = actualRequestCancel;
     }

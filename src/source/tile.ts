@@ -264,7 +264,6 @@ class Tile {
     painter: Painter,
     justReloaded?: boolean | null
   ) {
-    console.log("calling tile.loadVectorData", this.uid);
     this.unloadVectorData();
 
     this.state = "loaded";
