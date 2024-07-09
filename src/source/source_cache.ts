@@ -744,7 +744,8 @@ class SourceCache extends Evented {
     // the most ideal tile for the current viewport. This may include tiles like
     // parent or child tiles that are *already* loaded.
     const retain = this._updateRetainedTiles(idealTileIDs);
-    if (this._source.id === "vector-datasets-source__,,__434") {
+    console.log("this._source.id", this._source.id);
+    if (this._source.id === "vector-datasets-source__,,__425") {
       console.log("retain", retain);
     }
 
@@ -815,6 +816,10 @@ class SourceCache extends Evented {
 
     // Remove the tiles we don't need anymore.
     const remove = keysDifference(this._tiles as any, retain as any);
+
+    if (this._source.id === "vector-datasets-source__,,__425") {
+      console.log("remove", remove);
+    }
     for (const tileID of remove) {
       const tile = this._tiles[tileID];
       if (tile.hasSymbolBuckets && !tile.holdingForFade()) {
