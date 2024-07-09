@@ -465,6 +465,10 @@ class SourceCache extends Evented {
     for (const id in this._tiles) {
       let tile = this._tiles[id];
 
+      if (this._source.id === "vector-datasets-source__,,__425") {
+        console.log("tile has data", id, tile.hasData());
+      }
+
       // only consider renderable tiles up to maxCoveringZoom
       if (
         retain[id] ||
@@ -485,6 +489,13 @@ class SourceCache extends Evented {
           topmostLoadedID = parentID;
         }
       }
+
+      console.log(
+        "topmostLoadedID",
+        topmostLoadedID.key,
+        "for tile",
+        idealTiles
+      );
 
       // loop through ancestors of the topmost loaded child to see if there's one that needed it
       let tileID = topmostLoadedID;
