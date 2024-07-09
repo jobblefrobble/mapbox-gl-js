@@ -101,6 +101,7 @@ export class DedupedRequest {
       "result exists",
       Boolean(entry.result)
     );
+    console.log("woohoo", turnKeyIntoTileCoords(key));
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
@@ -152,6 +153,8 @@ export class DedupedRequest {
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
     }
+
+    console.log("adding callback", turnKeyIntoTileCoords(key));
 
     entry.callbacks.add(callback);
 
