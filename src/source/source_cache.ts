@@ -744,13 +744,12 @@ class SourceCache extends Evented {
     // the most ideal tile for the current viewport. This may include tiles like
     // parent or child tiles that are *already* loaded.
     const retain = this._updateRetainedTiles(idealTileIDs);
-    if (this._source.id === "vector-datasets-source__,,__425") {
-      console.log("retain", Object.keys(retain))?.map((key) => {
-        const c = retain?.[key]?.canonical;
-        const tileCoords = `${c.z}/${c.x}/${c.y}`;
-        return { id: key, tileCoords };
-      });
-    }
+    const tileEntries = Object.keys(retain)?.map((key) => {
+      const c = retain?.[key]?.canonical;
+      const tileCoords = `${c.z}/${c.x}/${c.y}`;
+      return { id: key, tileCoords };
+    });
+    console.log("retain", JSON.stringify(tileEntries));
 
     if (isRasterType(this._source.type) && idealTileIDs.length !== 0) {
       const parentsForFading: Partial<
