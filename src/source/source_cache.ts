@@ -201,7 +201,7 @@ class SourceCache extends Evented {
     if (this._source.abortTile) {
       console.log(
         "aborting tile from cache",
-        turnKeyIntoTileCoords(tile.request?.url)
+        tile?.uidturnKeyIntoTileCoords(tile.request?.url)
       );
       return this._source.abortTile(tile);
     }
@@ -813,6 +813,7 @@ class SourceCache extends Evented {
       if (tile.hasSymbolBuckets && !tile.holdingForFade()) {
         tile.setHoldDuration(this.map._fadeDuration);
       } else if (!tile.hasSymbolBuckets || tile.symbolFadeFinished()) {
+        console.log("removing in fade check", tileID);
         this._removeTile(+tileID);
       }
     }
@@ -828,6 +829,7 @@ class SourceCache extends Evented {
   releaseSymbolFadeTiles() {
     for (const id in this._tiles) {
       if (this._tiles[id].holdingForFade()) {
+        console.log("releaseSymbolFadeTiles", id);
         this._removeTile(+id);
       }
     }
@@ -1087,6 +1089,12 @@ class SourceCache extends Evented {
       // @ts-expect-error - TS2345 - Argument of type 'number | void' is not assignable to parameter of type 'number'.
       this._cache.add(tile.tileID, tile, tile.getExpiryTimeout());
     } else {
+      console.log(
+        "Tile removed in _removeTile source_cache",
+        "tile id\n",
+        id,
+        tile?.uid
+      );
       tile.aborted = true;
       this._abortTile(tile);
       this._unloadTile(tile);
@@ -1101,7 +1109,10 @@ class SourceCache extends Evented {
     this._shouldReloadOnResume = false;
     this._paused = false;
 
-    for (const id in this._tiles) this._removeTile(+id);
+    for (const id in this._tiles) {
+      console.log("removing through clearTile", id);
+      this._removeTile(+id);
+    }
 
     if (this._source._clear) this._source._clear();
 
