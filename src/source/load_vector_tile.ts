@@ -95,9 +95,9 @@ export class DedupedRequest {
       "deduped request",
       turnKeyIntoTileCoords(key),
       "cancel",
-      JSON.stringify(entry?.cancel),
+      entry?.cancel,
       "callbacks",
-      JSON.stringify(entry?.callbacks),
+      [...entry?.callbacks],
       "result exists",
       Boolean(entry.result)
     );
