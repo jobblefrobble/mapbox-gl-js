@@ -167,6 +167,7 @@ export class DedupedRequest {
             this.cancelled = true;
           },
         };
+        console.log("adding to queue", turnKeyIntoTileCoords(key));
         imageQueue.push(queued);
         entry.cancel = () => {
           imageQueue.forEach(
@@ -177,6 +178,7 @@ export class DedupedRequest {
       }
       numImageRequests++;
 
+      console.log("firing request", turnKeyIntoTileCoords(key));
       const actualRequestCancel = requestFunc((err, result) => {
         console.log("getArrayBuffer resolved", turnKeyIntoTileCoords(key));
         entry.result = [err, result];
