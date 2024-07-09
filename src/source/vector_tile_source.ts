@@ -367,6 +367,7 @@ class VectorTileSource extends Evented implements ISource {
       // schedule tile reloading after it has been loaded
       tile.reloadCallback = callback;
     } else {
+      console.log("calling reload Tile from vector_source", tile.uid);
       tile.request = tile.actor.send("reloadTile", params, done.bind(this));
     }
 
