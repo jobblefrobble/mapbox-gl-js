@@ -100,32 +100,12 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const perf = requestParam && requestParam.collectResourceTiming;
 
     const workerTile = (this.loading[uid] = new WorkerTile(params));
-
-    console.log(
-      "worker source calling loadVectorTile",
-      turnKeyIntoTileCoords(requestParam?.url),
-      "\nUID",
-      uid
-    );
     workerTile.abort = this.loadVectorData(params, (err, response) => {
-      console.log(
-        "worker source loadVectorData resolving",
-        turnKeyIntoTileCoords(requestParam?.url),
-        "UID",
-        uid
-      );
       const aborted = !this.loading[uid];
 
       delete this.loading[uid];
 
       if (aborted || err || !response) {
-        console.log(
-          "worker source loadVectorData aborted",
-          turnKeyIntoTileCoords(requestParam?.url),
-          aborted,
-          "UID",
-          uid
-        );
         workerTile.status = "done";
         if (!aborted) this.loaded[uid] = workerTile;
         return callback(err);
@@ -179,13 +159,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
         );
       };
 
-      console.log(
-        "worker source about to parseTile",
-        turnKeyIntoTileCoords(requestParam?.url),
-        "isSpriteLoaded",
-        this.isSpriteLoaded
-      );
-
       if (this.isSpriteLoaded) {
         parseTile();
       } else {
@@ -216,14 +189,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
   reloadTile(params: WorkerTileParameters, callback: WorkerTileCallback) {
     const loaded = this.loaded,
       uid = params.uid;
-
-    console.log(
-      "WorkerSource reloading tile",
-      "uid",
-      uid,
-      "url",
-      turnKeyIntoTileCoords(params?.request?.url)
-    );
 
     if (loaded && loaded[uid]) {
       const workerTile = loaded[uid];
@@ -281,13 +246,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
    */
   abortTile(params: TileParameters, callback: WorkerTileCallback) {
     const uid = params.uid;
-    console.log(
-      "WorkerSource aborting tile",
-      "uid",
-      uid,
-      "url",
-      turnKeyIntoTileCoords(params?.request?.url)
-    );
     const tile = this.loading[uid];
     if (tile) {
       if (tile.abort) tile.abort();

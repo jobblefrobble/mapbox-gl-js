@@ -91,17 +91,6 @@ export class DedupedRequest {
     fromQueue?: boolean
   ): () => void {
     const entry = (this.entries[key] = this.getEntry(key));
-    console.log(
-      "deduped request",
-      turnKeyIntoTileCoords(key),
-      "cancel",
-      entry?.cancel,
-      "callbacks",
-      entry?.callbacks,
-      "result exists",
-      Boolean(entry.result)
-    );
-
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
       if (entry.result) return;
@@ -142,29 +131,13 @@ export class DedupedRequest {
     };
 
     if (entry.result) {
-      console.log("entry.result exists", turnKeyIntoTileCoords(key));
       const [err, result] = entry.result;
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
     }
 
-    console.log("adding callback", turnKeyIntoTileCoords(key));
-
     entry.callbacks.add(callback);
-
-    console.log(
-      "entry.cancel",
-      turnKeyIntoTileCoords(key),
-      typeof entry.cancel
-    );
-
     if (!entry.cancel || fromQueue) {
-      console.log(
-        "no entry.cancel or coming from queue",
-        turnKeyIntoTileCoords(key),
-        "fromQueue",
-        fromQueue
-      );
       // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 50) {
         const queued = {
@@ -177,20 +150,12 @@ export class DedupedRequest {
             this.cancelled = true;
           },
         };
-        console.log("adding to queue", turnKeyIntoTileCoords(key));
         imageQueue.push(queued);
-        // entry.cancel = () => {
-        //   imageQueue.forEach(
-        //     (queueItem) => queueItem.key === key && queueItem.cancel()
-        //   );
-        // };
         return queued.cancel;
       }
       numImageRequests++;
 
-      console.log("firing request", turnKeyIntoTileCoords(key));
       const actualRequestCancel = requestFunc((err, result) => {
-        console.log("getArrayBuffer resolved", turnKeyIntoTileCoords(key));
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
           this.addToSchedulerOrCallDirectly({
@@ -212,13 +177,7 @@ export class DedupedRequest {
       entry.cancel = actualRequestCancel;
     }
 
-    console.log("returning cancel from dedupe", turnKeyIntoTileCoords(key));
-
     return () => {
-      console.log(
-        "removeCallbackFromEntry from overall cancel",
-        turnKeyIntoTileCoords(key)
-      );
       removeCallbackFromEntry({
         key,
         requestCallback: callback,
@@ -250,8 +209,6 @@ export function loadVectorTile(
   skipParse?: boolean
 ): () => void {
   const key = JSON.stringify(params.request);
-  console.log("calling loadVectorTile", turnKeyIntoTileCoords(key));
-
   const makeRequest = (callback: LoadVectorDataCallback) => {
     const request = getArrayBuffer(
       params.request,

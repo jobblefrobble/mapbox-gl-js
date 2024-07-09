@@ -323,10 +323,6 @@ class VectorTileSource extends Evented implements ISource {
           { deduped: this._deduped },
           params,
           (err?: Error | null, data?: LoadVectorTileResult | null) => {
-            console.log(
-              "loadVectorTile callback in normal source",
-              turnKeyIntoTileCoords(params?.request?.url)
-            );
             if (err || !data) {
               done.call(this, err);
             } else {
@@ -350,11 +346,6 @@ class VectorTileSource extends Evented implements ISource {
         );
         tile.request = { cancel };
       } else {
-        console.log(
-          "sending loadTile to tile.actor after initialising actor",
-          turnKeyIntoTileCoords(url),
-          params.uid
-        );
         tile.request = tile.actor.send(
           "loadTile",
           params,
@@ -367,12 +358,10 @@ class VectorTileSource extends Evented implements ISource {
       // schedule tile reloading after it has been loaded
       tile.reloadCallback = callback;
     } else {
-      console.log("calling reload Tile from vector_source", tile.uid);
       tile.request = tile.actor.send("reloadTile", params, done.bind(this));
     }
 
     function done(err?: Error | null, data?: WorkerTileResult | null) {
-      console.log("done handler in vector_tile_source", tile?.uid);
       delete tile.request;
 
       if (tile.aborted) return callback(null);
@@ -386,12 +375,6 @@ class VectorTileSource extends Evented implements ISource {
         tile.resourceTiming = data.resourceTiming;
 
       if (this.map._refreshExpiredTiles && data) tile.setExpiryData(data);
-
-      console.log(
-        "setting tile state to loaded!",
-        turnKeyIntoTileCoords(params?.request?.url),
-        tile.uid
-      );
       tile.loadVectorData(data, this.map.painter);
 
       cacheEntryPossiblyAdded(this.dispatcher);
@@ -406,21 +389,11 @@ class VectorTileSource extends Evented implements ISource {
   }
 
   abortTile(tile: Tile) {
-    console.log(
-      "abortTile in vector_tile_source",
-      turnKeyIntoTileCoords(tile?.request?.url),
-      tile?.uid
-    );
     if (tile.request) {
       tile.request.cancel();
       delete tile.request;
     }
     if (tile.actor) {
-      console.log(
-        "vector_tile_source asking tile actor to abort",
-        turnKeyIntoTileCoords(tile?.request?.url),
-        tile?.uid
-      );
       tile.actor.send("abortTile", {
         uid: tile.uid,
         type: this.type,
