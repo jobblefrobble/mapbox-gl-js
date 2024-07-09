@@ -158,7 +158,10 @@ export class DedupedRequest {
 
     entry.callbacks.add(callback);
 
+    console.log("entry.cancel", JSON.stringify(entry.cancel));
+
     if (!entry.cancel || fromQueue) {
+      console.log("no entry.cancel", turnKeyIntoTileCoords(key));
       // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 50) {
         const queued = {
@@ -204,6 +207,8 @@ export class DedupedRequest {
       });
       entry.cancel = actualRequestCancel;
     }
+
+    console.log("returning cancel from dedupe", turnKeyIntoTileCoords(key));
 
     return () => {
       removeCallbackFromEntry({
