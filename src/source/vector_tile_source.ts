@@ -320,6 +320,10 @@ class VectorTileSource extends Evented implements ISource {
           { deduped: this._deduped },
           params,
           (err?: Error | null, data?: LoadVectorTileResult | null) => {
+            console.log(
+              "loadVectorTile callback in normal source",
+              turnKeyIntoTileCoords(params?.request?.url)
+            );
             if (err || !data) {
               done.call(this, err);
             } else {

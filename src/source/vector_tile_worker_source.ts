@@ -214,6 +214,14 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const loaded = this.loaded,
       uid = params.uid;
 
+    console.log(
+      "WorkerSource reloading tile",
+      "uid",
+      uid,
+      "url",
+      turnKeyIntoTileCoords(params?.request?.url)
+    );
+
     if (loaded && loaded[uid]) {
       const workerTile = loaded[uid];
       workerTile.showCollisionBoxes = params.showCollisionBoxes;
