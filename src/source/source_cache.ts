@@ -744,6 +744,9 @@ class SourceCache extends Evented {
     // the most ideal tile for the current viewport. This may include tiles like
     // parent or child tiles that are *already* loaded.
     const retain = this._updateRetainedTiles(idealTileIDs);
+    if (this._source.id.includes("425")) {
+      console.log("retain", retain);
+    }
 
     if (isRasterType(this._source.type) && idealTileIDs.length !== 0) {
       const parentsForFading: Partial<

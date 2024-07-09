@@ -101,7 +101,6 @@ export class DedupedRequest {
       "result exists",
       Boolean(entry.result)
     );
-    console.log("woohoo", turnKeyIntoTileCoords(key));
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
@@ -121,11 +120,6 @@ export class DedupedRequest {
       if (advanced) {
         return;
       }
-      console.log(
-        "advancing request queue",
-        numImageRequests,
-        imageQueue.length
-      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -142,17 +136,12 @@ export class DedupedRequest {
             true
           );
         } else {
-          console.log(
-            "removeCallbackFromEntry from queue",
-            turnKeyIntoTileCoords(key)
-          );
           removeCallbackFromEntry({ key, requestCallback: callback });
         }
       }
     };
 
     if (entry.result) {
-      console.log("entry.result exists", turnKeyIntoTileCoords(key));
       const [err, result] = entry.result;
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
@@ -165,7 +154,12 @@ export class DedupedRequest {
     console.log("entry.cancel", turnKeyIntoTileCoords(key), entry.cancel);
 
     if (!entry.cancel || fromQueue) {
-      console.log("no entry.cancel", turnKeyIntoTileCoords(key));
+      console.log(
+        "no entry.cancel or coming from queue",
+        turnKeyIntoTileCoords(key),
+        "fromQueue",
+        fromQueue
+      );
       // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 50) {
         const queued = {
@@ -265,11 +259,6 @@ export function loadVectorTile(
         if (err) {
           callback(err);
         } else if (data) {
-          console.log(
-            "makeRequest resolution",
-            turnKeyIntoTileCoords(key),
-            skipParse
-          );
           callback(null, {
             vectorTile: skipParse
               ? undefined
@@ -288,7 +277,6 @@ export function loadVectorTile(
   };
 
   if (params.data) {
-    console.log("got params.data", turnKeyIntoTileCoords(key));
     // if we already got the result earlier (on the main thread), return it directly
     (this.deduped as DedupedRequest).entries[key] = {
       result: [null, params.data],
