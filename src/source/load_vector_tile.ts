@@ -147,6 +147,7 @@ export class DedupedRequest {
     };
 
     if (entry.result) {
+      console.log("entry.result exists", turnKeyIntoTileCoords(key));
       const [err, result] = entry.result;
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
