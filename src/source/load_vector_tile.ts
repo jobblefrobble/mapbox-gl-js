@@ -200,21 +200,20 @@ export class DedupedRequest {
           uid
         );
         entry.result = [err, result];
-        for (const cb of entry.callbacks) {
-          console.log(
-            "scheduling callback for entry after getting array buffer",
-            turnKeyIntoTileCoords(key),
-            "uid",
-            uid
-          );
-          this.addToSchedulerOrCallDirectly({
-            callback: cb,
-            metadata,
-            err,
-            result,
-            key: uid,
-          });
-        }
+        console.log(
+          "scheduling callback for entry after getting array buffer",
+          turnKeyIntoTileCoords(key),
+          "uid",
+          uid
+        );
+        this.addToSchedulerOrCallDirectly({
+          callback: callback,
+          metadata,
+          err,
+          result,
+          key: uid,
+        });
+
         imageQueue = imageQueue.filter((queued) => queued.key !== key);
         advanceImageRequestQueue();
 
