@@ -11,6 +11,7 @@ import type { VectorTile } from "@mapbox/vector-tile";
 import type { Callback } from "../types/callback";
 import type { RequestedTileParameters } from "./worker_source";
 import type Scheduler from "../util/scheduler";
+import type { Cancelable } from "src/types/cancelable";
 
 export type LoadVectorTileResult = {
   rawData: ArrayBuffer;
@@ -18,6 +19,17 @@ export type LoadVectorTileResult = {
   expires?: any;
   cacheControl?: any;
   resourceTiming?: Array<PerformanceResourceTiming>;
+};
+
+const turnKeyIntoTileCoords = (key: string) => {
+  if (!key) return;
+  const splitByPbf = key.split(".pbf");
+  const splitBySlash = splitByPbf[0].split("/");
+  const layerId = splitBySlash[splitBySlash.length - 4];
+  const z = splitBySlash[splitBySlash.length - 3];
+  const x = splitBySlash[splitBySlash.length - 2];
+  const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
+  return `${layerId}/${z}/${x}/${y}`;
 };
 
 /**
@@ -98,10 +110,10 @@ export class DedupedRequest {
     callback: LoadVectorDataCallback,
     fromQueue?: boolean,
     uid?: number
-  ): () => void {
+  ): Cancelable {
     const entry = (this.entries[key] = this.getEntry(key));
 
-    const removeCallbackFromEntry = ({ key, requestCallback }) => {
+    const removeCallbackFromEntry = ({ key, requestCallback, tileId }) => {
       const entry = this.getEntry(key);
       if (entry.result) return;
       entry.callbacks.delete(requestCallback);
@@ -109,6 +121,7 @@ export class DedupedRequest {
         return;
       }
       if (entry.cancel) {
+        console.log("calling entry.cancel", turnKeyIntoTileCoords(key));
         entry.cancel();
       }
       imageQueue = imageQueue.filter((queued) => queued.key !== key);
@@ -123,12 +136,18 @@ export class DedupedRequest {
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
-      while (imageQueue.length && numImageRequests < 50) {
+      while (imageQueue.length && numImageRequests < 1) {
         // eslint-disable-line
         const request = imageQueue.shift();
         const { key, metadata, requestFunc, callback, cancelled, uid } =
           request;
         if (!cancelled) {
+          console.log(
+            "retrying from the queue",
+            turnKeyIntoTileCoords(key),
+            "tile id",
+            uid
+          );
           request.cancel = this.request(
             key,
             metadata,
@@ -137,8 +156,6 @@ export class DedupedRequest {
             true,
             uid
           );
-        } else {
-          removeCallbackFromEntry({ key, requestCallback: callback });
         }
       }
     };
@@ -152,14 +169,14 @@ export class DedupedRequest {
         result,
         key: uid,
       });
-      return () => {};
+      return { cancel: () => {} };
     }
     entry.callbacks.add(callback);
 
     const inQueue = imageQueue.some((queued) => queued.key === key);
     if ((!entry.cancel && !inQueue) || fromQueue) {
       // Lack of attached cancel handler means this is the first request for this resource
-      if (numImageRequests >= 50) {
+      if (numImageRequests >= 1) {
         const queued = {
           key,
           metadata,
@@ -167,15 +184,34 @@ export class DedupedRequest {
           callback,
           cancelled: false,
           uid,
-          cancel() {
-            this.cancelled = true;
-          },
+          cancel() {},
         };
+        const cancelFunc = () => {
+          console.log(
+            "cancelling queued object",
+            turnKeyIntoTileCoords(key),
+            "tile id",
+            uid
+          );
+          queued.cancelled = true;
+          removeCallbackFromEntry({
+            key,
+            requestCallback: callback,
+            tileId: uid,
+          });
+        };
+        queued.cancel = cancelFunc;
         imageQueue.push(queued);
-        return queued.cancel;
+        return queued;
       }
       numImageRequests++;
 
+      console.log(
+        "making the actual request for array buffer",
+        turnKeyIntoTileCoords(key),
+        "tile id",
+        uid
+      );
       const actualRequestCancel = requestFunc((err, result) => {
         entry.result = [err, result];
 
@@ -196,14 +232,26 @@ export class DedupedRequest {
           delete this.entries[key];
         }, 1000 * 3);
       });
-      entry.cancel = actualRequestCancel;
+      entry.cancel = () => {
+        console.log("calling entry.cancel after instantiated getArrayBuffer");
+        actualRequestCancel();
+      };
     }
 
-    return () => {
-      removeCallbackFromEntry({
-        key,
-        requestCallback: callback,
-      });
+    return {
+      cancel() {
+        console.log(
+          "cancelling unqueued object",
+          turnKeyIntoTileCoords(key),
+          "tile id",
+          uid
+        );
+        removeCallbackFromEntry({
+          key,
+          requestCallback: callback,
+          tileId: uid,
+        });
+      },
     };
   }
 }
@@ -260,7 +308,7 @@ export function loadVectorTile(
     zoom: params.tileZoom,
   };
 
-  return (this.deduped as DedupedRequest).request(
+  const dedupedAndQueuedRequest = (this.deduped as DedupedRequest).request(
     key,
     callbackMetadata,
     makeRequest,
@@ -268,4 +316,6 @@ export function loadVectorTile(
     false,
     uid
   );
+
+  return dedupedAndQueuedRequest.cancel;
 }
