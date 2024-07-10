@@ -59,16 +59,22 @@ export class DedupedRequest {
     metadata,
     err,
     result,
+    key,
   }: {
     callback: LoadVectorDataCallback;
     metadata: any;
     err: Error | null | undefined;
     result: any;
+    key: string;
   }) {
     if (this.scheduler) {
-      this.scheduler.add(() => {
-        callback(err, result);
-      }, metadata);
+      this.scheduler.add(
+        () => {
+          callback(err, result);
+        },
+        metadata,
+        key
+      );
     } else {
       callback(err, result);
     }
@@ -144,7 +150,13 @@ export class DedupedRequest {
     if (entry.result) {
       console.log("entry.result exists", turnKeyIntoTileCoords(key));
       const [err, result] = entry.result;
-      this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
+      this.addToSchedulerOrCallDirectly({
+        callback,
+        metadata,
+        err,
+        result,
+        key: turnKeyIntoTileCoords(key),
+      });
       return () => {};
     }
     entry.callbacks.add(callback);
@@ -191,6 +203,7 @@ export class DedupedRequest {
             metadata,
             err,
             result,
+            key: turnKeyIntoTileCoords(key),
           });
         }
         imageQueue = imageQueue.filter((queued) => queued.key !== key);
