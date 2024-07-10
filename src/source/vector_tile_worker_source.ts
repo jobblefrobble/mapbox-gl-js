@@ -100,13 +100,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const perf = requestParam && requestParam.collectResourceTiming;
 
     const workerTile = (this.loading[uid] = new WorkerTile(params));
-
-    console.log(
-      "worker source calling loadVectorTile",
-      turnKeyIntoTileCoords(requestParam?.url),
-      "\nUID",
-      uid
-    );
     workerTile.abort = this.loadVectorData(params, (err, response) => {
       console.log(
         "worker source loadVectorData resolving",
@@ -178,13 +171,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
           workerTileCallback
         );
       };
-
-      console.log(
-        "worker source about to parseTile",
-        turnKeyIntoTileCoords(requestParam?.url),
-        "isSpriteLoaded",
-        this.isSpriteLoaded
-      );
 
       if (this.isSpriteLoaded) {
         parseTile();
@@ -281,13 +267,6 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
    */
   abortTile(params: TileParameters, callback: WorkerTileCallback) {
     const uid = params.uid;
-    console.log(
-      "WorkerSource aborting tile",
-      "uid",
-      uid,
-      "url",
-      turnKeyIntoTileCoords(params?.request?.url)
-    );
     const tile = this.loading[uid];
     if (tile) {
       if (tile.abort) tile.abort();

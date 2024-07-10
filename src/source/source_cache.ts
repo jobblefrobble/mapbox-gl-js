@@ -202,11 +202,6 @@ class SourceCache extends Evented {
 
   _abortTile(tile: Tile): void {
     if (this._source.abortTile) {
-      console.log(
-        "aborting tile from cache",
-        tile?.uid,
-        turnKeyIntoTileCoords(tile.request?.url)
-      );
       return this._source.abortTile(tile);
     }
   }
@@ -464,11 +459,6 @@ class SourceCache extends Evented {
   ) {
     for (const id in this._tiles) {
       let tile = this._tiles[id];
-
-      if (this._source.id === "vector-datasets-source__,,__425") {
-        console.log("tile has data", id, tile.hasData());
-      }
-
       // only consider renderable tiles up to maxCoveringZoom
       if (
         retain[id] ||
@@ -489,13 +479,6 @@ class SourceCache extends Evented {
           topmostLoadedID = parentID;
         }
       }
-
-      console.log(
-        "topmostLoadedID",
-        topmostLoadedID.key,
-        "for tile",
-        idealTiles
-      );
 
       // loop through ancestors of the topmost loaded child to see if there's one that needed it
       let tileID = topmostLoadedID;
@@ -761,7 +744,6 @@ class SourceCache extends Evented {
         const tileCoords = `${c.z}/${c.x}/${c.y}`;
         return { id: key, tileCoords };
       });
-      console.log("retain", JSON.stringify(tileEntries));
     }
 
     if (isRasterType(this._source.type) && idealTileIDs.length !== 0) {
@@ -831,21 +813,11 @@ class SourceCache extends Evented {
 
     // Remove the tiles we don't need anymore.
     const remove = keysDifference(this._tiles as any, retain as any);
-
-    if (this._source.id === "vector-datasets-source__,,__425") {
-      console.log("remove", remove);
-    }
     for (const tileID of remove) {
       const tile = this._tiles[tileID];
       if (tile.hasSymbolBuckets && !tile.holdingForFade()) {
         tile.setHoldDuration(this.map._fadeDuration);
       } else if (!tile.hasSymbolBuckets || tile.symbolFadeFinished()) {
-        console.log(
-          "removing in fade check",
-          "source ID",
-          this._source?.id,
-          tileID
-        );
         this._removeTile(+tileID);
       }
     }
@@ -861,12 +833,6 @@ class SourceCache extends Evented {
   releaseSymbolFadeTiles() {
     for (const id in this._tiles) {
       if (this._tiles[id].holdingForFade()) {
-        console.log(
-          "releaseSymbolFadeTiles",
-          "source ID",
-          this._source?.id,
-          id
-        );
         this._removeTile(+id);
       }
     }
@@ -1126,14 +1092,6 @@ class SourceCache extends Evented {
       // @ts-expect-error - TS2345 - Argument of type 'number | void' is not assignable to parameter of type 'number'.
       this._cache.add(tile.tileID, tile, tile.getExpiryTimeout());
     } else {
-      console.log(
-        "Tile removed in _removeTile source_cache",
-        "source ID",
-        this._source?.id,
-        "tile id\n",
-        id,
-        tile?.uid
-      );
       tile.aborted = true;
       this._abortTile(tile);
       this._unloadTile(tile);
@@ -1149,12 +1107,6 @@ class SourceCache extends Evented {
     this._paused = false;
 
     for (const id in this._tiles) {
-      console.log(
-        "removing through clearTile",
-        "source ID",
-        this._source?.id,
-        id
-      );
       this._removeTile(+id);
     }
 

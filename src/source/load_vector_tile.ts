@@ -147,9 +147,6 @@ export class DedupedRequest {
       this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
       return () => {};
     }
-
-    console.log("adding callback", turnKeyIntoTileCoords(key));
-
     entry.callbacks.add(callback);
 
     console.log(
@@ -180,11 +177,6 @@ export class DedupedRequest {
         };
         console.log("adding to queue", turnKeyIntoTileCoords(key));
         imageQueue.push(queued);
-        // entry.cancel = () => {
-        //   imageQueue.forEach(
-        //     (queueItem) => queueItem.key === key && queueItem.cancel()
-        //   );
-        // };
         return queued.cancel;
       }
       numImageRequests++;
@@ -214,10 +206,6 @@ export class DedupedRequest {
     console.log("returning cancel from dedupe", turnKeyIntoTileCoords(key));
 
     return () => {
-      console.log(
-        "removeCallbackFromEntry from overall cancel",
-        turnKeyIntoTileCoords(key)
-      );
       removeCallbackFromEntry({
         key,
         requestCallback: callback,
@@ -231,9 +219,6 @@ const turnKeyIntoTileCoords = (key: string) => {
   const splitByPbf = key.split(".pbf");
   const splitBySlash = splitByPbf[0].split("/");
   const layerId = splitBySlash[splitBySlash.length - 4];
-  if (layerId != 425) {
-    return;
-  }
   const z = splitBySlash[splitBySlash.length - 3];
   const x = splitBySlash[splitBySlash.length - 2];
   const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
