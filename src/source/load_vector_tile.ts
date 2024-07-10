@@ -118,6 +118,7 @@ export class DedupedRequest {
       if (entry.cancel) {
         entry.cancel();
       }
+      imageQueue = imageQueue.filter((queued) => queued.key !== key);
       delete this.entries[key];
     };
 
