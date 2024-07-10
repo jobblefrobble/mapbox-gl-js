@@ -33,7 +33,9 @@ export type LoadVectorDataCallback = Callback<
 export type AbortVectorData = () => void;
 export type LoadVectorData = (
   params: RequestedTileParameters,
-  callback: LoadVectorDataCallback
+  callback: LoadVectorDataCallback,
+  skipParse?: boolean,
+  uid?: number
 ) => AbortVectorData | null | undefined;
 
 let imageQueue, numImageRequests;
@@ -59,16 +61,22 @@ export class DedupedRequest {
     metadata,
     err,
     result,
+    key,
   }: {
     callback: LoadVectorDataCallback;
     metadata: any;
     err: Error | null | undefined;
     result: any;
+    key: string | number;
   }) {
     if (this.scheduler) {
-      this.scheduler.add(() => {
-        callback(err, result);
-      }, metadata);
+      this.scheduler.add(
+        () => {
+          callback(err, result);
+        },
+        metadata,
+        key
+      );
     } else {
       callback(err, result);
     }
@@ -88,9 +96,11 @@ export class DedupedRequest {
     metadata: any,
     requestFunc: any,
     callback: LoadVectorDataCallback,
-    fromQueue?: boolean
+    fromQueue?: boolean,
+    uid?: number
   ): () => void {
     const entry = (this.entries[key] = this.getEntry(key));
+
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
       if (entry.result) return;
@@ -101,6 +111,7 @@ export class DedupedRequest {
       if (entry.cancel) {
         entry.cancel();
       }
+      imageQueue = imageQueue.filter((queued) => queued.key !== key);
       delete this.entries[key];
     };
 
@@ -115,14 +126,16 @@ export class DedupedRequest {
       while (imageQueue.length && numImageRequests < 50) {
         // eslint-disable-line
         const request = imageQueue.shift();
-        const { key, metadata, requestFunc, callback, cancelled } = request;
+        const { key, metadata, requestFunc, callback, cancelled, uid } =
+          request;
         if (!cancelled) {
           request.cancel = this.request(
             key,
             metadata,
             requestFunc,
             callback,
-            true
+            true,
+            uid
           );
         } else {
           removeCallbackFromEntry({ key, requestCallback: callback });
@@ -132,12 +145,19 @@ export class DedupedRequest {
 
     if (entry.result) {
       const [err, result] = entry.result;
-      this.addToSchedulerOrCallDirectly({ callback, metadata, err, result });
+      this.addToSchedulerOrCallDirectly({
+        callback,
+        metadata,
+        err,
+        result,
+        key: uid,
+      });
       return () => {};
     }
-
     entry.callbacks.add(callback);
-    if (!entry.cancel || fromQueue) {
+
+    const inQueue = imageQueue.some((queued) => queued.key === key);
+    if ((!entry.cancel && !inQueue) || fromQueue) {
       // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 50) {
         const queued = {
@@ -146,6 +166,7 @@ export class DedupedRequest {
           requestFunc,
           callback,
           cancelled: false,
+          uid,
           cancel() {
             this.cancelled = true;
           },
@@ -157,19 +178,21 @@ export class DedupedRequest {
 
       const actualRequestCancel = requestFunc((err, result) => {
         entry.result = [err, result];
-        for (const cb of entry.callbacks) {
-          this.addToSchedulerOrCallDirectly({
-            callback: cb,
-            metadata,
-            err,
-            result,
-          });
-        }
+
+        // Notable difference here compared to previous deduper, no longer iterating through callbacks stored on the entry
+        // Due to intermittent errors thrown when duplicate arrayBuffers get added to the scheduling
+        this.addToSchedulerOrCallDirectly({
+          callback,
+          metadata,
+          err,
+          result,
+          key: uid,
+        });
+
+        imageQueue = imageQueue.filter((queued) => queued.key !== key);
         advanceImageRequestQueue();
 
-        // Maybe need to clear out the queue too here?
         setTimeout(() => {
-          imageQueue = imageQueue.filter((queued) => queued.key !== key);
           delete this.entries[key];
         }, 1000 * 3);
       });
@@ -185,27 +208,14 @@ export class DedupedRequest {
   }
 }
 
-const turnKeyIntoTileCoords = (key: string) => {
-  if (!key) return;
-  const splitByPbf = key.split(".pbf");
-  const splitBySlash = splitByPbf[0].split("/");
-  const layerId = splitBySlash[splitBySlash.length - 4];
-  if (layerId != 425) {
-    return;
-  }
-  const z = splitBySlash[splitBySlash.length - 3];
-  const x = splitBySlash[splitBySlash.length - 2];
-  const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
-  return `${layerId}/${z}/${x}/${y}`;
-};
-
 /**
  * @private
  */
 export function loadVectorTile(
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback,
-  skipParse?: boolean
+  skipParse?: boolean,
+  uid?: number
 ): () => void {
   const key = JSON.stringify(params.request);
   const makeRequest = (callback: LoadVectorDataCallback) => {
@@ -254,6 +264,8 @@ export function loadVectorTile(
     key,
     callbackMetadata,
     makeRequest,
-    callback
+    callback,
+    false,
+    uid
   );
 }

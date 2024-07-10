@@ -459,7 +459,6 @@ class SourceCache extends Evented {
   ) {
     for (const id in this._tiles) {
       let tile = this._tiles[id];
-
       // only consider renderable tiles up to maxCoveringZoom
       if (
         retain[id] ||

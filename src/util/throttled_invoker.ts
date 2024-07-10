@@ -5,40 +5,41 @@
  * @private
  */
 class ThrottledInvoker {
-    _channel: MessageChannel | null | undefined;
-    _triggered: boolean;
-    _callback: any;
+  _channel: MessageChannel | null | undefined;
+  _triggered: boolean;
+  _callback: any;
 
-    constructor(callback: any) {
-        this._callback = callback;
+  constructor(callback: any) {
+    this._callback = callback;
+    this._triggered = false;
+    if (typeof MessageChannel !== "undefined") {
+      this._channel = new MessageChannel();
+      this._channel.port2.onmessage = () => {
+        // Calling it in here when the error is happening
         this._triggered = false;
-        if (typeof MessageChannel !== 'undefined') {
-            this._channel = new MessageChannel();
-            this._channel.port2.onmessage = () => {
-                this._triggered = false;
-                this._callback();
-            };
-        }
+        this._callback();
+      };
     }
+  }
 
-    trigger() {
-        if (!this._triggered) {
-            this._triggered = true;
-            if (this._channel) {
-                this._channel.port1.postMessage(true);
-            } else {
-                setTimeout(() => {
-                    this._triggered = false;
-                    this._callback();
-                }, 0);
-            }
-        }
+  trigger() {
+    if (!this._triggered) {
+      this._triggered = true;
+      if (this._channel) {
+        this._channel.port1.postMessage(true);
+      } else {
+        setTimeout(() => {
+          this._triggered = false;
+          this._callback();
+        }, 0);
+      }
     }
+  }
 
-    remove() {
-        this._channel = undefined;
-        this._callback = () => {};
-    }
+  remove() {
+    this._channel = undefined;
+    this._callback = () => {};
+  }
 }
 
 export default ThrottledInvoker;
