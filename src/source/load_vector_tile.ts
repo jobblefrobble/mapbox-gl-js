@@ -200,11 +200,11 @@ export class DedupedRequest {
             result,
           });
         }
+        imageQueue = imageQueue.filter((queued) => queued.key !== key);
         advanceImageRequestQueue();
 
         setTimeout(() => {
           delete this.entries[key];
-          imageQueue = imageQueue.filter((queued) => queued.key !== key);
         }, 1000 * 3);
       });
       entry.cancel = actualRequestCancel;
