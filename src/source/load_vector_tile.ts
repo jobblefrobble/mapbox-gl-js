@@ -79,7 +79,6 @@ export class DedupedRequest {
       this.entries[key] || {
         // use a set to avoid duplicate callbacks being added when calling from queue
         callbacks: new Set(),
-        inQueue: false,
       }
     );
   };
@@ -159,7 +158,8 @@ export class DedupedRequest {
       typeof entry.cancel
     );
 
-    if ((!entry.cancel && !entry.inQueue) || fromQueue) {
+    const inQueue = imageQueue.some((queued) => queued.key === key);
+    if ((!entry.cancel && !inQueue) || fromQueue) {
       console.log(
         "no entry.cancel or coming from queue",
         turnKeyIntoTileCoords(key),
@@ -168,7 +168,6 @@ export class DedupedRequest {
       );
       // Lack of attached cancel handler means this is the first request for this resource
       if (numImageRequests >= 50) {
-        entry.inQueue = true;
         const queued = {
           key,
           metadata,
