@@ -33,7 +33,9 @@ export type LoadVectorDataCallback = Callback<
 export type AbortVectorData = () => void;
 export type LoadVectorData = (
   params: RequestedTileParameters,
-  callback: LoadVectorDataCallback
+  callback: LoadVectorDataCallback,
+  skipParse?: boolean,
+  uid?: number
 ) => AbortVectorData | null | undefined;
 
 let imageQueue, numImageRequests;
@@ -65,7 +67,7 @@ export class DedupedRequest {
     metadata: any;
     err: Error | null | undefined;
     result: any;
-    key: string;
+    key: string | number;
   }) {
     if (this.scheduler) {
       this.scheduler.add(
@@ -94,19 +96,11 @@ export class DedupedRequest {
     metadata: any,
     requestFunc: any,
     callback: LoadVectorDataCallback,
-    fromQueue?: boolean
+    fromQueue?: boolean,
+    uid?: number
   ): () => void {
     const entry = (this.entries[key] = this.getEntry(key));
-    console.log(
-      "deduped request",
-      turnKeyIntoTileCoords(key),
-      "cancel",
-      entry?.cancel,
-      "callbacks",
-      entry?.callbacks,
-      "result exists",
-      Boolean(entry.result)
-    );
+    console.log("deduped request", turnKeyIntoTileCoords(key), "uid", uid);
 
     const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
@@ -133,14 +127,16 @@ export class DedupedRequest {
       while (imageQueue.length && numImageRequests < 50) {
         // eslint-disable-line
         const request = imageQueue.shift();
-        const { key, metadata, requestFunc, callback, cancelled } = request;
+        const { key, metadata, requestFunc, callback, cancelled, uid } =
+          request;
         if (!cancelled) {
           request.cancel = this.request(
             key,
             metadata,
             requestFunc,
             callback,
-            true
+            true,
+            uid
           );
         } else {
           removeCallbackFromEntry({ key, requestCallback: callback });
@@ -156,7 +152,7 @@ export class DedupedRequest {
         metadata,
         err,
         result,
-        key: turnKeyIntoTileCoords(key),
+        key: uid,
       });
       return () => {};
     }
@@ -184,31 +180,39 @@ export class DedupedRequest {
           requestFunc,
           callback,
           cancelled: false,
+          uid,
           cancel() {
             this.cancelled = true;
           },
         };
-        console.log("adding to queue", turnKeyIntoTileCoords(key));
+        console.log("adding to queue", turnKeyIntoTileCoords(key), "uid", uid);
         imageQueue.push(queued);
         return queued.cancel;
       }
       numImageRequests++;
 
-      console.log("firing request", turnKeyIntoTileCoords(key));
+      console.log("firing request", turnKeyIntoTileCoords(key), "uid", uid);
       const actualRequestCancel = requestFunc((err, result) => {
-        console.log("getArrayBuffer resolved", turnKeyIntoTileCoords(key));
+        console.log(
+          "getArrayBuffer resolved",
+          turnKeyIntoTileCoords(key),
+          "uid",
+          uid
+        );
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
           console.log(
             "scheduling callback for entry after getting array buffer",
-            turnKeyIntoTileCoords(key)
+            turnKeyIntoTileCoords(key),
+            "uid",
+            uid
           );
           this.addToSchedulerOrCallDirectly({
             callback: cb,
             metadata,
             err,
             result,
-            key: turnKeyIntoTileCoords(key),
+            key: uid,
           });
         }
         imageQueue = imageQueue.filter((queued) => queued.key !== key);
@@ -221,7 +225,12 @@ export class DedupedRequest {
       entry.cancel = actualRequestCancel;
     }
 
-    console.log("returning cancel from dedupe", turnKeyIntoTileCoords(key));
+    console.log(
+      "returning cancel from dedupe",
+      turnKeyIntoTileCoords(key),
+      "uid",
+      uid
+    );
 
     return () => {
       removeCallbackFromEntry({
@@ -249,10 +258,11 @@ const turnKeyIntoTileCoords = (key: string) => {
 export function loadVectorTile(
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback,
-  skipParse?: boolean
+  skipParse?: boolean,
+  uid?: number
 ): () => void {
   const key = JSON.stringify(params.request);
-  console.log("calling loadVectorTile", turnKeyIntoTileCoords(key));
+  console.log("calling loadVectorTile", turnKeyIntoTileCoords(key), "uid", uid);
 
   const makeRequest = (callback: LoadVectorDataCallback) => {
     const request = getArrayBuffer(
@@ -300,6 +310,8 @@ export function loadVectorTile(
     key,
     callbackMetadata,
     makeRequest,
-    callback
+    callback,
+    false,
+    uid
   );
 }

@@ -100,99 +100,105 @@ class VectorTileWorkerSource extends Evented implements WorkerSource {
     const perf = requestParam && requestParam.collectResourceTiming;
 
     const workerTile = (this.loading[uid] = new WorkerTile(params));
-    workerTile.abort = this.loadVectorData(params, (err, response) => {
-      console.log(
-        "worker source loadVectorData resolving",
-        turnKeyIntoTileCoords(requestParam?.url),
-        "UID",
-        uid
-      );
-      const aborted = !this.loading[uid];
-
-      delete this.loading[uid];
-
-      if (aborted || err || !response) {
+    workerTile.abort = this.loadVectorData(
+      params,
+      (err, response) => {
         console.log(
-          "worker source loadVectorData aborted",
+          "worker source loadVectorData resolving",
           turnKeyIntoTileCoords(requestParam?.url),
-          aborted,
           "UID",
           uid
         );
-        workerTile.status = "done";
-        if (!aborted) this.loaded[uid] = workerTile;
-        return callback(err);
-      }
+        const aborted = !this.loading[uid];
 
-      const rawTileData = response.rawData;
-      const cacheControl: Record<string, any> = {};
-      if (response.expires) cacheControl.expires = response.expires;
-      if (response.cacheControl)
-        cacheControl.cacheControl = response.cacheControl;
+        delete this.loading[uid];
 
-      // response.vectorTile will be present in the GeoJSON worker case (which inherits from this class)
-      // because we stub the vector tile interface around JSON data instead of parsing it directly
-      workerTile.vectorTile =
-        response.vectorTile || new VectorTile(new Protobuf(rawTileData));
-      const parseTile = () => {
-        const workerTileCallback = (
-          err?: Error | null,
-          result?: WorkerTileResult | null
-        ) => {
-          if (err || !result) return callback(err);
+        if (aborted || err || !response) {
+          console.log(
+            "worker source loadVectorData aborted",
+            turnKeyIntoTileCoords(requestParam?.url),
+            aborted,
+            "UID",
+            uid
+          );
+          workerTile.status = "done";
+          if (!aborted) this.loaded[uid] = workerTile;
+          return callback(err);
+        }
 
-          const resourceTiming: Record<string, any> = {};
-          if (perf) {
-            // Transferring a copy of rawTileData because the worker needs to retain its copy.
-            const resourceTimingData = getPerformanceMeasurement(requestParam);
-            // it's necessary to eval the result of getEntriesByName() here via parse/stringify
-            // late evaluation in the main thread causes TypeError: illegal invocation
-            if (resourceTimingData.length > 0) {
-              resourceTiming.resourceTiming = JSON.parse(
-                JSON.stringify(resourceTimingData)
-              );
+        const rawTileData = response.rawData;
+        const cacheControl: Record<string, any> = {};
+        if (response.expires) cacheControl.expires = response.expires;
+        if (response.cacheControl)
+          cacheControl.cacheControl = response.cacheControl;
+
+        // response.vectorTile will be present in the GeoJSON worker case (which inherits from this class)
+        // because we stub the vector tile interface around JSON data instead of parsing it directly
+        workerTile.vectorTile =
+          response.vectorTile || new VectorTile(new Protobuf(rawTileData));
+        const parseTile = () => {
+          const workerTileCallback = (
+            err?: Error | null,
+            result?: WorkerTileResult | null
+          ) => {
+            if (err || !result) return callback(err);
+
+            const resourceTiming: Record<string, any> = {};
+            if (perf) {
+              // Transferring a copy of rawTileData because the worker needs to retain its copy.
+              const resourceTimingData =
+                getPerformanceMeasurement(requestParam);
+              // it's necessary to eval the result of getEntriesByName() here via parse/stringify
+              // late evaluation in the main thread causes TypeError: illegal invocation
+              if (resourceTimingData.length > 0) {
+                resourceTiming.resourceTiming = JSON.parse(
+                  JSON.stringify(resourceTimingData)
+                );
+              }
             }
-          }
-          callback(
-            null,
-            extend(
-              { rawTileData: rawTileData.slice(0) },
-              result,
-              cacheControl,
-              resourceTiming
-            )
+            callback(
+              null,
+              extend(
+                { rawTileData: rawTileData.slice(0) },
+                result,
+                cacheControl,
+                resourceTiming
+              )
+            );
+          };
+          workerTile.parse(
+            workerTile.vectorTile,
+            this.layerIndex,
+            this.availableImages,
+            this.actor,
+            workerTileCallback
           );
         };
-        workerTile.parse(
-          workerTile.vectorTile,
-          this.layerIndex,
-          this.availableImages,
-          this.actor,
-          workerTileCallback
-        );
-      };
 
-      if (this.isSpriteLoaded) {
-        parseTile();
-      } else {
-        this.once("isSpriteLoaded", () => {
-          if (this.scheduler) {
-            const metadata = {
-              type: "parseTile",
-              isSymbolTile: params.isSymbolTile,
-              zoom: params.tileZoom,
-            };
-            // @ts-expect-error - TS2345 - Argument of type '{ type: string; isSymbolTile: boolean; zoom: number; }' is not assignable to parameter of type 'TaskMetadata'.
-            this.scheduler.add(parseTile, metadata);
-          } else {
-            parseTile();
-          }
-        });
-      }
+        if (this.isSpriteLoaded) {
+          parseTile();
+        } else {
+          this.once("isSpriteLoaded", () => {
+            if (this.scheduler) {
+              const metadata = {
+                type: "parseTile",
+                isSymbolTile: params.isSymbolTile,
+                zoom: params.tileZoom,
+              };
+              // @ts-expect-error - TS2345 - Argument of type '{ type: string; isSymbolTile: boolean; zoom: number; }' is not assignable to parameter of type 'TaskMetadata'.
+              this.scheduler.add(parseTile, metadata);
+            } else {
+              parseTile();
+            }
+          });
+        }
 
-      this.loaded = this.loaded || {};
-      this.loaded[uid] = workerTile;
-    });
+        this.loaded = this.loaded || {};
+        this.loaded[uid] = workerTile;
+      },
+      false,
+      uid
+    );
   }
 
   /**
