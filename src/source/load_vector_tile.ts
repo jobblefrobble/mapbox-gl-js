@@ -113,6 +113,20 @@ export class DedupedRequest {
   ): Cancelable {
     const entry = (this.entries[key] = this.getEntry(key));
 
+    const filterQueue = (key) => {
+      for (let i = imageQueue.length - 1; i >= 0; i--) {
+        if (imageQueue[i].key === key) {
+          console.log(
+            "removing from queue",
+            turnKeyIntoTileCoords(key),
+            "tile id",
+            imageQueue[i].uid
+          );
+          imageQueue.splice(i, 1);
+        }
+      }
+    };
+
     const removeCallbackFromEntry = ({ key, requestCallback, tileId }) => {
       const entry = this.getEntry(key);
       if (entry.result) return;
@@ -124,7 +138,7 @@ export class DedupedRequest {
         console.log("calling entry.cancel", turnKeyIntoTileCoords(key));
         entry.cancel();
       }
-      imageQueue = imageQueue.filter((queued) => queued.key !== key);
+      filterQueue(key);
       delete this.entries[key];
     };
 
@@ -156,6 +170,8 @@ export class DedupedRequest {
             true,
             uid
           );
+        } else {
+          filterQueue(key);
         }
       }
     };
@@ -225,7 +241,7 @@ export class DedupedRequest {
           key: uid,
         });
 
-        imageQueue = imageQueue.filter((queued) => queued.key !== key);
+        filterQueue(key);
         advanceImageRequestQueue();
 
         setTimeout(() => {
