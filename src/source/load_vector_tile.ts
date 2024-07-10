@@ -198,6 +198,10 @@ export class DedupedRequest {
         console.log("getArrayBuffer resolved", turnKeyIntoTileCoords(key));
         entry.result = [err, result];
         for (const cb of entry.callbacks) {
+          console.log(
+            "scheduling callback for entry after getting array buffer",
+            turnKeyIntoTileCoords(key)
+          );
           this.addToSchedulerOrCallDirectly({
             callback: cb,
             metadata,
