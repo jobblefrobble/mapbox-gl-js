@@ -206,8 +206,11 @@ export class DedupedRequest {
           "uid",
           uid
         );
+
+        // Notable difference here compared to previous deduper, no longer iterating through callbacks stored on the entry
+        // Due to intermittent errors thrown when duplicate arrayBuffers get added to the scheduling
         this.addToSchedulerOrCallDirectly({
-          callback: callback,
+          callback,
           metadata,
           err,
           result,
