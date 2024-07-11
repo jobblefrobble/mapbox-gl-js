@@ -116,12 +116,6 @@ export class DedupedRequest {
     const filterQueue = (key) => {
       for (let i = imageQueue.length - 1; i >= 0; i--) {
         if (imageQueue[i].key === key) {
-          console.log(
-            "removing from queue",
-            turnKeyIntoTileCoords(key),
-            "tile id",
-            imageQueue[i].uid
-          );
           imageQueue.splice(i, 1);
         }
       }
@@ -135,7 +129,6 @@ export class DedupedRequest {
         return;
       }
       if (entry.cancel) {
-        console.log("calling entry.cancel", turnKeyIntoTileCoords(key));
         entry.cancel();
       }
       filterQueue(key);
@@ -147,12 +140,6 @@ export class DedupedRequest {
       if (advanced) {
         return;
       }
-
-      console.log(
-        "advancing image request queue",
-        numImageRequests,
-        imageQueue.length
-      );
       advanced = true;
       numImageRequests--;
       assert(numImageRequests >= 0);
@@ -162,12 +149,6 @@ export class DedupedRequest {
         const { key, metadata, requestFunc, callback, cancelled, uid } =
           request;
         if (!cancelled) {
-          console.log(
-            "retrying from the queue",
-            turnKeyIntoTileCoords(key),
-            "tile id",
-            uid
-          );
           request.cancel = this.request(
             key,
             metadata,
@@ -209,12 +190,6 @@ export class DedupedRequest {
           cancel() {},
         };
         const cancelFunc = () => {
-          console.log(
-            "cancelling queued object",
-            turnKeyIntoTileCoords(key),
-            "tile id",
-            uid
-          );
           queued.cancelled = true;
           removeCallbackFromEntry({
             key,
@@ -228,12 +203,6 @@ export class DedupedRequest {
       }
       numImageRequests++;
 
-      console.log(
-        "making the actual request for array buffer",
-        turnKeyIntoTileCoords(key),
-        "tile id",
-        uid
-      );
       const actualRequestCancel = requestFunc((err, result) => {
         entry.result = [err, result];
 
@@ -255,19 +224,12 @@ export class DedupedRequest {
         }, 1000 * 3);
       });
       entry.cancel = () => {
-        console.log("calling entry.cancel after instantiated getArrayBuffer");
         actualRequestCancel();
       };
     }
 
     return {
       cancel() {
-        console.log(
-          "cancelling unqueued object",
-          turnKeyIntoTileCoords(key),
-          "tile id",
-          uid
-        );
         removeCallbackFromEntry({
           key,
           requestCallback: callback,
