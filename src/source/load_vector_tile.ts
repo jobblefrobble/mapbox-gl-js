@@ -1,5 +1,3 @@
-/* eslint-disable object-curly-spacing */
-/* eslint-disable indent */
 // @ts-expect-error - TS2300 - Duplicate identifier 'VectorTile'.
 import { VectorTile } from "@mapbox/vector-tile";
 import Protobuf from "pbf";
@@ -236,9 +234,9 @@ export function loadVectorTile(
           callback(err);
         } else if (data) {
           callback(null, {
-            vectorTile: skipParse ?
-              undefined :
-              new VectorTile(new Protobuf(data)),
+            vectorTile: skipParse
+              ? undefined
+              : new VectorTile(new Protobuf(data)),
             rawData: data,
             cacheControl,
             expires,
