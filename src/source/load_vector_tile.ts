@@ -35,8 +35,7 @@ export type AbortVectorData = () => void;
 export type LoadVectorData = (
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback,
-  skipParse?: boolean,
-  uid?: number
+  skipParse?: boolean
 ) => AbortVectorData | null | undefined;
 
 let imageQueue, numImageRequests;
@@ -62,22 +61,16 @@ export class DedupedRequest {
     metadata,
     err,
     result,
-    key,
   }: {
     callback: LoadVectorDataCallback;
     metadata: any;
     err: Error | null | undefined;
     result: any;
-    key: string | number;
   }) {
     if (this.scheduler) {
-      this.scheduler.add(
-        () => {
-          callback(err, result);
-        },
-        metadata,
-        key
-      );
+      this.scheduler.add(() => {
+        callback(err, result);
+      }, metadata);
     } else {
       callback(err, result);
     }
@@ -97,8 +90,7 @@ export class DedupedRequest {
     metadata: any,
     requestFunc: any,
     callback: LoadVectorDataCallback,
-    fromQueue?: boolean,
-    uid?: number
+    fromQueue?: boolean
   ): Cancelable {
     const entry = (this.entries[key] = this.getEntry(key));
 
@@ -135,16 +127,14 @@ export class DedupedRequest {
       while (imageQueue.length && numImageRequests < 50) {
         // eslint-disable-line
         const request = imageQueue.shift();
-        const { key, metadata, requestFunc, callback, cancelled, uid } =
-          request;
+        const { key, metadata, requestFunc, callback, cancelled } = request;
         if (!cancelled) {
           request.cancel = this.request(
             key,
             metadata,
             requestFunc,
             callback,
-            true,
-            uid
+            true
           );
         } else {
           filterQueue(key);
@@ -159,7 +149,6 @@ export class DedupedRequest {
         metadata,
         err,
         result,
-        key: uid,
       });
       return { cancel: () => {} };
     }
@@ -175,7 +164,6 @@ export class DedupedRequest {
           requestFunc,
           callback,
           cancelled: false,
-          uid,
           cancel() {},
         };
         const cancelFunc = () => {
@@ -201,7 +189,6 @@ export class DedupedRequest {
           metadata,
           err,
           result,
-          key: uid,
         });
 
         filterQueue(key);
@@ -233,8 +220,7 @@ export class DedupedRequest {
 export function loadVectorTile(
   params: RequestedTileParameters,
   callback: LoadVectorDataCallback,
-  skipParse?: boolean,
-  uid?: number
+  skipParse?: boolean
 ): () => void {
   const key = JSON.stringify(params.request);
   const makeRequest = (callback: LoadVectorDataCallback) => {
@@ -284,8 +270,7 @@ export function loadVectorTile(
     callbackMetadata,
     makeRequest,
     callback,
-    false,
-    uid
+    false
   );
 
   return dedupedAndQueuedRequest.cancel;

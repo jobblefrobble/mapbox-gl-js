@@ -36,11 +36,7 @@ class Scheduler {
     this.nextId = 0;
   }
 
-  add(
-    fn: TaskFunction,
-    metadata: TaskMetadata,
-    tileKey?: string | number
-  ): Cancelable | null {
+  add(fn: TaskFunction, metadata: TaskMetadata): Cancelable | null {
     const id = this.nextId++;
     const priority = getPriority(metadata);
 
