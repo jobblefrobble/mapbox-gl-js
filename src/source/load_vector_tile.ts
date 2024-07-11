@@ -21,17 +21,6 @@ export type LoadVectorTileResult = {
   resourceTiming?: Array<PerformanceResourceTiming>;
 };
 
-const turnKeyIntoTileCoords = (key: string) => {
-  if (!key) return;
-  const splitByPbf = key.split(".pbf");
-  const splitBySlash = splitByPbf[0].split("/");
-  const layerId = splitBySlash[splitBySlash.length - 4];
-  const z = splitBySlash[splitBySlash.length - 3];
-  const x = splitBySlash[splitBySlash.length - 2];
-  const y = splitBySlash[splitBySlash.length - 1].split(".")[0];
-  return `${layerId}/${z}/${x}/${y}`;
-};
-
 /**
  * @callback LoadVectorDataCallback
  * @param error
@@ -121,7 +110,7 @@ export class DedupedRequest {
       }
     };
 
-    const removeCallbackFromEntry = ({ key, requestCallback, tileId }) => {
+    const removeCallbackFromEntry = ({ key, requestCallback }) => {
       const entry = this.getEntry(key);
       if (entry.result) return;
       entry.callbacks.delete(requestCallback);
@@ -194,7 +183,6 @@ export class DedupedRequest {
           removeCallbackFromEntry({
             key,
             requestCallback: callback,
-            tileId: uid,
           });
         };
         queued.cancel = cancelFunc;
@@ -233,7 +221,6 @@ export class DedupedRequest {
         removeCallbackFromEntry({
           key,
           requestCallback: callback,
-          tileId: uid,
         });
       },
     };
