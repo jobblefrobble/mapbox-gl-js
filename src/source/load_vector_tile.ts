@@ -236,9 +236,9 @@ export function loadVectorTile(
           callback(err);
         } else if (data) {
           callback(null, {
-            vectorTile: skipParse
-              ? undefined
-              : new VectorTile(new Protobuf(data)),
+            vectorTile: skipParse ?
+              undefined :
+              new VectorTile(new Protobuf(data)),
             rawData: data,
             cacheControl,
             expires,
